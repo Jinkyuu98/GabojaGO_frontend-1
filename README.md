@@ -1,16 +1,101 @@
-# React + Vite
+# 화면 구조 및 흐름 문서
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+이 문서는 `GABOJAGO` 프로젝트의 화면 구조와 라우팅 흐름을 상세하게 설명합니다.
 
-Currently, two official plugins are available:
+## 1. 프로젝트 구조 개요
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+이 프로젝트는 기능(Feature) 단위로 디렉토리가 구성되어 있어, 각 화면과 관련된 로직이 `src/features` 아래에 모듈화되어 있습니다.
 
-## React Compiler
+### 주요 디렉토리 구조 (`src/features`)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **auth/**: 인증 관련 화면 (로그인, 회원가입)
+- **onboarding/**: 앱 실행 시 초기 흐름 및 여행 생성 설문 (Splash, Intro, 설문 단계)
+- **dashboard/**: 메인 홈 화면
+- **trip/**: 여행 목록, 여행 생성 결과, 지도 보기 등
+- **trip-detail/**: 특정 여행의 상세 정보, 카메라 기능
+- **place/**: 장소 상세 정보
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 2. 화면 흐름 (User Flow)
+
+앱의 전체적인 화면 흐름은 다음과 같습니다.
+
+### 2.1. 진입 및 온보딩 (Entry & Onboarding)
+
+1.  **Splash Screen** (`/splash`)
+    - 앱 실행 시 가장 먼저 표시됩니다.
+    - 로그인 여부를 확인하여 분기 처리합니다.
+      - 로그인 됨 -> **Home Dashboard** (`/home`)로 이동
+      - 로그인 안됨 -> **Intro (Guest Landing)** (`/intro`)로 이동
+
+2.  **Intro (로그인/게시판 허브)** (`/intro`)
+    - 모든 사용자의 진입점 역할을 수행합니다.
+    - **Guest**: "AI 여행 일정 생성하기"로 온보딩 시작.
+    - **User**: 하단 버튼을 통해 로그인 및 회원가입 진행.
+    - **통합**: 기존의 독립된 `/login` 경로는 폐쇄되었으며, 모든 인증 흐름은 `Intro` 페이지로 통합되었습니다.
+    - **조건부 UI**: 결과 페이지에서 로그인 유도 시 좌측 상단에 '닫기(X)' 버튼이 노출되어 다시 결과로 돌아올 수 있습니다.
+
+3.  **Onboarding (여행 생성 설문)** (`/onboarding/...`)
+    - 여행 일정을 생성하기 위한 단계별 설문입니다.
+    - `LocationInput` (여행지) -> `AccommodationSearch` (숙소) -> `DateSelection` (날짜) -> `CompanionSelection` (동행) -> `PeopleCount` (인원) -> `TransportSelection` (교통) -> `TravelStyle` (스타일) -> `BudgetInput` (예산)
+    - 모든 입력 완료 -> `GenerateLoading` (생성 중) -> `Result` (생성 완료)
+
+### 2.2. 메인 서비스 (Main Service)
+
+4.  **Home Dashboard** (`/home`)
+    - 로그인한 사용자를 위한 프리미엄 디자인의 메인 화면입니다.
+    - **현재 여행 카드**: 제주도 여행 등 현재 진행 중인 일정을 강조하여 표시 (남은 예산, 프로그레스 바 포함).
+    - **추천 콘텐츠**: '제주도 인기 여행 코스 TOP 10', '인기 맛집 리스트' 등 지역 특화 정보를 제공합니다.
+    - **하단 네비게이션**: 홈, 일정, 장소 검색, 마이페이지로 빠른 이동이 가능합니다.
+
+5.  **Trip List** (`/trips`)
+    - 나의 모든 여행 일정을 확인하는 목록 화면입니다.
+    - '여정'(예정된 여행)과 '기록'(지난 여행) 탭으로 구분됩니다.
+
+### 2.3. 여행 상세 (Trip Detail)
+
+6.  **Trip Detail / Result Page** (`/onboarding/result` 또는 `/trips/:tripId`)
+    - 생성된 여행 일정을 지도와 함께 확인하는 화면입니다.
+    - **3단계 스냅 바텀시트**:
+      - **Low (100px)**: 일정과 버튼을 숨기고 '일차별 탭'만 노출하여 지도를 넓게 봅니다.
+      - **Mid (60%)**: 주요 일정 목록과 저장 버튼이 노출됩니다.
+      - **High (95%)**: 전체 일정을 상세히 확인합니다.
+    - **지도(Map)**: 배경 전면에 인터랙티브 지도가 배치됩니다.
+
+7.  **Camera** (`/trips/:tripId/camera/:mode`)
+    - 여행 중 사진 촬영 또는 영수증 스캔을 위한 카메라 화면입니다.
+    - 모드(`mode`): `photo` (일반 촬영) / `receipt` (영수증 스캔)
+
+---
+
+## 3. 라우팅 구성 상세 (`App.jsx`)
+
+| 경로 (Path)          | 컴포넌트 (Component) | 설명                             |
+| :------------------- | :------------------- | :------------------------------- |
+| `/`, `/splash`       | `Splash`             | 초기 로딩 및 로그인 체크         |
+| `/intro`             | `IntroPage`          | 로그인/회원가입/게스트 통합 허브 |
+| `/home`              | `HomePage`           | 프리미엄 메인 대시보드           |
+| `/onboarding/*`      | (Various)            | 여행 생성 설문 단계별 페이지     |
+| `/onboarding/result` | `ResultPage`         | 생성 완료 후 지도/일정 확인      |
+| `/trips`             | `TripsListPage`      | 전체 여행 목록                   |
+| `/trips/:tripId`     | `TripDetailPage`     | 특정 여행 상세 (진행 중)         |
+| `/signup`            | `SignupPage`         | 회원가입 (Intro와 통일된 UI)     |
+
+## 4. 주요 컴포넌트 상세 설명
+
+### `HomeDashboard.jsx` (재설정)
+
+- 현대적이고 세련된 UI로 개편되었습니다.
+- 사용자의 목적에 맞는 추천 코스와 맛집 리스트를 카드 형태로 제공하여 탐색 경험을 강화했습니다.
+
+### `ResultPage.jsx` 및 `BottomSheet.jsx`
+
+- `framer-motion`을 사용하여 부드러운 애니메이션을 구현했습니다.
+- **스마트 뷰**: 사용자가 지도를 보고 싶어 시트를 내리면(100px), 번잡한 버튼이나 긴 리스트는 자동으로 사라지고 일차 선택 탭만 남겨 가독성을 극대화합니다.
+- **고정 레이어**: 헤더(고정), 바텀시트(드래그), 푸터(플로팅)의 `z-index`를 엄격히 관리하여 UI 겹침 문제를 해결했습니다.
+
+### `IntroPage.jsx` (로그인 허브)
+
+- 서비스의 얼굴인 동시에 모든 인증 흐름을 담당합니다.
+- 결과 페이지에서 넘어올 경우 `showClose=true` 상태를 통해 사용자가 흐름을 끊지 않고 유연하게 돌아갈 수 있는 '탈출구'를 제공합니다.
