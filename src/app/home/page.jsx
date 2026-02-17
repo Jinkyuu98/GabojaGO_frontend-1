@@ -3,42 +3,32 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { BottomNavigation } from "../../components/layout/BottomNavigation";
 
 export default function HomePage() {
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push("/onboarding/result");
+    router.push("/trips/1");
   };
 
   return (
     <div className="w-full min-h-screen bg-white">
-      {/* Status Bar */}
-      <div className="flex items-center justify-between px-5 pt-3 pb-2">
-        <span className="text-[15px] font-semibold tracking-[-0.5px] text-[#111111]">
-          9:41
-        </span>
-        <Image
-          src="/icons/status-bar-right.svg"
-          alt="status"
-          width={66}
-          height={11}
-          className="w-[66px] h-[11px]"
-        />
-      </div>
-
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-2 pb-6">
         <h1 className="text-[20px] font-bold tracking-[-0.5px] text-[#111111]">
           가보자GO
         </h1>
-        <button className="bg-[#111111] text-white px-[14px] py-[10px] rounded-full text-[14px] font-medium">
+        <button
+          className="bg-[#111111] text-white px-[14px] py-[10px] rounded-full text-[14px] font-medium"
+          onClick={() => router.push("/onboarding/location")}
+        >
           AI 일정 생성
         </button>
       </div>
 
       {/* Main Content */}
-      <div className="pb-24">
+      <div className="pb-32">
         {/* Travel Card */}
         <div className="px-5">
           <div
@@ -242,62 +232,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#f2f4f6]">
-        <div className="flex items-start justify-around px-5 pt-3">
-          <button className="flex flex-col items-center gap-0.5">
-            <Image
-              src="/icons/home-active.svg"
-              alt="home"
-              width={20}
-              height={20}
-              className="w-5 h-5"
-            />
-            <span className="text-[11px] font-medium tracking-[-0.28px] text-[#111111]">
-              홈
-            </span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 text-[#abb1b9]">
-            <Image
-              src="/icons/calendar.svg"
-              alt="schedule"
-              width={20}
-              height={22}
-              className="w-5 h-[22px]"
-            />
-            <span className="text-[11px] font-medium tracking-[-0.28px] text-[#abb1b9]">
-              일정
-            </span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5">
-            <Image
-              src="/icons/location.svg"
-              alt="search"
-              width={16}
-              height={19}
-              className="w-4 h-[19px]"
-            />
-            <span className="text-[11px] font-medium tracking-[-0.28px] text-[#abb1b9]">
-              장소 검색
-            </span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 text-[#abb1b9]">
-            <Image
-              src="/icons/user.svg"
-              alt="mypage"
-              width={16}
-              height={20}
-              className="w-4 h-5"
-            />
-            <span className="text-[11px] font-medium tracking-[-0.28px] text-[#abb1b9]">
-              마이페이지
-            </span>
-          </button>
-        </div>
-        <div className="flex justify-center pt-2 pb-1">
-          <div className="w-[134px] h-[5px] bg-[#000000] rounded-full" />
-        </div>
-      </div>
+      <BottomNavigation />
 
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {

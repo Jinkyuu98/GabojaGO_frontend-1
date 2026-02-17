@@ -2,57 +2,85 @@
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Home, Map, Heart, Clock, User } from "lucide-react";
-import { useOnboardingStore } from "../../store/useOnboardingStore";
+import Image from "next/image";
 import { clsx } from "clsx";
 
 export const BottomNavigation = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { myTrips } = useOnboardingStore();
 
   const NAV_ITEMS = [
-    { label: "홈", path: "/home", icon: Home },
-    { label: "내 여행", path: "/trips", icon: Map },
-    { label: "찜", path: "/saved", icon: Heart }, // Placeholder
-    { label: "기록", path: "/history", icon: Clock }, // Placeholder
-    { label: "마이", path: "/profile", icon: User }, // Placeholder
+    {
+      label: "홈",
+      path: "/home",
+      icon: "/icons/home-active.svg",
+      width: 20,
+      height: 20,
+    },
+    {
+      label: "일정",
+      path: "/trips",
+      icon: "/icons/calendar.svg",
+      width: 20,
+      height: 22,
+    },
+    {
+      label: "장소 검색",
+      path: "/search",
+      icon: "/icons/location.svg",
+      width: 16,
+      height: 19,
+    },
+    {
+      label: "마이페이지",
+      path: "/profile",
+      icon: "/icons/user.svg",
+      width: 16,
+      height: 20,
+    },
   ];
 
   return (
-    <nav className="absolute bottom-0 left-0 w-full h-[80px] bg-[#f2f2f7] flex justify-around items-center pb-5 z-[1000] backdrop-blur-md bg-opacity-95 border-t border-[#aeaeb2]/20">
-      {NAV_ITEMS.map((item) => {
-        const isActive = pathname.startsWith(item.path);
-        const Icon = item.icon;
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#f2f4f6] z-50">
+      <div className="flex items-start justify-around px-5 pt-3">
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.path;
 
-        return (
-          <button
-            key={item.path}
-            className="flex flex-col items-center justify-center w-12 h-12 bg-transparent border-none cursor-pointer"
-            onClick={() => router.push(item.path)}
-          >
-            <Icon
-              size={24}
-              className={clsx("mb-1 transition-colors duration-200", {
-                "text-[#111111]": isActive,
-                "text-[#aeaeb2]": !isActive,
-              })}
-              strokeWidth={isActive ? 2.5 : 2}
-            />
-            <span
-              className={clsx(
-                "text-[10px] font-medium transition-colors duration-200",
-                {
-                  "text-[#111111]": isActive,
-                  "text-[#aeaeb2]": !isActive,
-                },
-              )}
+          return (
+            <button
+              key={item.path}
+              className="flex flex-col items-center gap-0.5"
+              onClick={() => router.push(item.path)}
             >
-              {item.label}
-            </span>
-          </button>
-        );
-      })}
-    </nav>
+              <Image
+                src={item.icon}
+                alt={item.label}
+                width={item.width}
+                height={item.height}
+                className={clsx("transition-all", {
+                  "grayscale-0 opacity-100":
+                    isActive || (item.label === "홈" && isActive),
+                  "grayscale opacity-70": !isActive && item.label !== "홈",
+                  // Special case for home-active.svg which is already active/colored
+                  "grayscale opacity-70": !isActive && item.label === "홈",
+                })}
+                style={item.label === "일정" ? { height: "22px" } : {}}
+              />
+              <span
+                className={clsx(
+                  "text-[11px] font-medium tracking-[-0.28px] transition-colors",
+                  {
+                    "text-[#111111]": isActive,
+                    "text-[#abb1b9]": !isActive,
+                  },
+                )}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 };

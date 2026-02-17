@@ -1,0 +1,50 @@
+"use client";
+
+import React, { useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { MobileContainer } from "../../components/layout/MobileContainer";
+import { BottomNavigation } from "../../components/layout/BottomNavigation";
+
+export default function SearchPage() {
+  const router = useRouter();
+
+  return (
+    <MobileContainer>
+      <div className="relative w-full h-screen bg-white overflow-hidden">
+        {/* Map Background */}
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src="/images/map-background.png"
+            alt="map"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+
+        {/* Top Search Bar Overlay */}
+        <div className="absolute top-0 left-0 right-0 px-5 pt-12 pb-4 z-20">
+          <div
+            className="flex items-center gap-3 bg-white h-14 px-4 rounded-2xl shadow-[0px_4px_16_rgba(0,0,0,0.08)] border border-[#f2f4f6] cursor-pointer"
+            onClick={() => router.push("/search/input")}
+          >
+            <Image
+              src="/icons/location.svg"
+              alt="location"
+              width={16}
+              height={19}
+              className="grayscale opacity-60"
+            />
+            <div className="flex-1 text-[16px] font-medium text-[#abb1b9]">
+              어디로 가고 싶으신가요?
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <BottomNavigation />
+      </div>
+    </MobileContainer>
+  );
+}
