@@ -177,7 +177,17 @@ export default function TravelCameraPage() {
             </>
           ) : (
             <div className="w-full flex justify-between items-center">
-              <div className="w-10" />
+              {isReceipt ? (
+                <button
+                  className="w-20 text-white text-sm font-medium bg-transparent border-none cursor-pointer"
+                  onClick={() => alert("직접 입력 페이지로 이동합니다.")}
+                >
+                  직접 입력
+                </button>
+              ) : (
+                <div className="w-20" />
+              )}
+
               <button
                 className="w-20 h-20 rounded-full border-[5px] border-white flex items-center justify-center bg-transparent cursor-pointer active:scale-95 transition-transform"
                 onClick={handleCapture}
@@ -185,12 +195,14 @@ export default function TravelCameraPage() {
               >
                 <div className="w-16 h-16 rounded-full bg-white transition-opacity hover:opacity-90" />
               </button>
+
               <button
-                className="w-10 h-10 flex items-center justify-center bg-transparent border-none cursor-pointer text-white"
+                className="w-20 h-20 flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer text-white"
                 onClick={handleAlbumClick}
                 title="앨범에서 선택"
               >
-                <ImageIcon size={28} />
+                <ImageIcon size={24} />
+                <span className="text-[10px] font-medium">불러오기</span>
                 <input
                   type="file"
                   ref={fileInputRef}

@@ -22,27 +22,27 @@ export const BottomNavigation = () => {
       path: "/trips",
       icon: "/icons/calendar.svg",
       width: 20,
-      height: 22,
+      height: 20,
     },
     {
       label: "장소 검색",
       path: "/search",
       icon: "/icons/location.svg",
-      width: 16,
-      height: 19,
+      width: 22,
+      height: 22,
     },
     {
       label: "마이페이지",
       path: "/profile",
       icon: "/icons/user.svg",
       width: 16,
-      height: 20,
+      height: 16,
     },
   ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#f2f4f6] z-50">
-      <div className="flex items-start justify-around px-5 pt-3">
+      <div className="flex items-start justify-around px-5 pt-2 pb-2">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path;
 
@@ -58,13 +58,9 @@ export const BottomNavigation = () => {
                 width={item.width}
                 height={item.height}
                 className={clsx("transition-all", {
-                  "grayscale-0 opacity-100":
-                    isActive || (item.label === "홈" && isActive),
-                  "grayscale opacity-70": !isActive && item.label !== "홈",
-                  // Special case for home-active.svg which is already active/colored
-                  "grayscale opacity-70": !isActive && item.label === "홈",
+                  "grayscale-0 opacity-100": isActive,
+                  "grayscale opacity-40": !isActive,
                 })}
-                style={item.label === "일정" ? { height: "22px" } : {}}
               />
               <span
                 className={clsx(

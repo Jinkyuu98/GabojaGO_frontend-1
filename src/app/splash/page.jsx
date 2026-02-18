@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { SparklesText } from "../../components/ui/sparkles-text";
 
 export default function SplashPage() {
   const router = useRouter();
@@ -24,42 +24,20 @@ export default function SplashPage() {
         className="relative h-[812px] w-full max-w-[375px]"
         style={{ backgroundColor: "#111111" }}
       >
-        {/* Traveler Character Image - positioned at y: 234px from container top */}
+        {/* Logo Text - positioned at y: 491px from container top */}
         <div
           style={{
             position: "absolute",
-            left: "99px",
-            top: "234px",
-            width: "197px",
-            height: "259px",
+            left: "0",
+            right: "0",
+            top: "360px",
+            textAlign: "center",
           }}
         >
-          <Image
-            src="/traveler-character.png"
-            alt="Traveler"
-            width={197}
-            height={259}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          <SparklesText className="text-[36px] font-extrabold text-white tracking-[-0.8px]">
+            가보자GO
+          </SparklesText>
         </div>
-
-        {/* Logo Text - positioned at y: 491px from container top */}
-        <h1
-          style={{
-            position: "absolute",
-            left: "114px",
-            top: "491px",
-            fontFamily: "Pretendard Variable, Pretendard, sans-serif",
-            fontSize: "36px",
-            fontWeight: 800,
-            letterSpacing: "-0.8px",
-            lineHeight: "50px",
-            color: "#ffffff",
-            margin: 0,
-          }}
-        >
-          가보자GO
-        </h1>
       </div>
     </div>
   );

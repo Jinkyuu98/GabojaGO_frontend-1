@@ -48,8 +48,13 @@ export default function MyPage() {
   return (
     <MobileContainer>
       <div className="w-full h-screen bg-white flex flex-col">
+        <header className="flex items-center justify-between px-5 py-4 backdrop-blur-md sticky top-0 z-10">
+          <h1 className="text-[20px] font-semibold text-[#111] tracking-tighter">
+            마이페이지
+          </h1>
+        </header>
         {/* Profile Section */}
-        <div className="px-5 pt-12 pb-6">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-[#f2f4f6] rounded-full flex items-center justify-center border border-[#eceff4]">
               <Image
@@ -61,12 +66,20 @@ export default function MyPage() {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <h1 className="text-[22px] font-bold text-[#111111] tracking-[-0.5px]">
+              <h1 className="text-[20px] font-bold text-[#111111] tracking-[-0.5px]">
                 {user.name}
               </h1>
-              <span className="text-[14px] font-medium text-[#7a28fa] bg-[#f9f5ff] px-2.5 py-1 rounded-lg inline-block w-fit">
-                내 리뷰 {user.reviewCount}개
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-[14px] font-medium text-[#424242] inline-block w-fit">
+                  내 리뷰 {user.reviewCount}개
+                </span>
+                <Image
+                  src="/icons/arrow-right.svg"
+                  alt="arrow-right"
+                  width={16}
+                  height={16}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -93,7 +106,7 @@ export default function MyPage() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto bg-[#fafafa] px-5 py-6 pb-32">
           {activeTab === "장소" ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               {savedPlaces.map((place) => (
                 <div
                   key={place.id}

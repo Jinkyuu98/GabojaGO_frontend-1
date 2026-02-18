@@ -49,15 +49,35 @@ export default function TripDetailPage() {
     budget: {
       total: 500000,
       spent: [
-        { category: "숙박비", amount: 500000, color: "#14b8a6", percentage: 62 },
+        {
+          category: "숙박비",
+          amount: 500000,
+          color: "#14b8a6",
+          percentage: 62,
+        },
         { category: "식비", amount: 500000, color: "#3b82f6", percentage: 25 },
-        { category: "교통비", amount: 500000, color: "#ffa918", percentage: 12 },
+        {
+          category: "교통비",
+          amount: 500000,
+          color: "#ffa918",
+          percentage: 12,
+        },
         { category: "기타", amount: 500000, color: "#b115fa", percentage: 6 },
       ],
       planned: [
-        { category: "숙박비", amount: 500000, color: "#14b8a6", percentage: 62 },
+        {
+          category: "숙박비",
+          amount: 500000,
+          color: "#14b8a6",
+          percentage: 62,
+        },
         { category: "식비", amount: 500000, color: "#3b82f6", percentage: 25 },
-        { category: "교통비", amount: 500000, color: "#ffa918", percentage: 12 },
+        {
+          category: "교통비",
+          amount: 500000,
+          color: "#ffa918",
+          percentage: 12,
+        },
         { category: "기타", amount: 500000, color: "#b115fa", percentage: 6 },
       ],
     },
@@ -256,35 +276,8 @@ export default function TripDetailPage() {
                 {trip.title}
               </h1>
             </div>
-            <button className="text-sm font-medium text-[#111111]">편집</button>
-          </div>
-
-          {/* Floating Actions */}
-          <div
-            className="absolute right-4 flex flex-col gap-3 z-10 transition-all duration-300"
-            style={{ bottom: `${sheetHeight + 20}px` }}
-          >
-            <button
-              className="w-12 h-12 rounded-full bg-white text-[#111] flex items-center justify-center shadow-lg border-none cursor-pointer"
-              onClick={() => router.push(`/trips/${tripId}/camera/receipt`)}
-            >
-              <Image
-                src="/icons/receipt.svg"
-                alt="receipt"
-                width={22}
-                height={22}
-              />
-            </button>
-            <button
-              className="w-12 h-12 rounded-full bg-white text-[#111] flex items-center justify-center shadow-lg border-none cursor-pointer"
-              onClick={() => router.push(`/trips/${tripId}/camera/photo`)}
-            >
-              <Image
-                src="/icons/camera.svg"
-                alt="camera"
-                width={22}
-                height={22}
-              />
+            <button className="text-sm font-medium text-[#111111]">
+              챗봇 대화
             </button>
           </div>
         </div>
@@ -311,19 +304,20 @@ export default function TripDetailPage() {
           {/* Tabs - Hidden when collapsed */}
           {!isCollapsed && (
             <div className="border-b border-[#e5ebf2] px-5">
-              <div className="flex items-center gap-4 pb-3">
+              <div className="flex items-center gap-4">
                 {tabs.map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setSelectedTab(tab)}
                     className={clsx(
-                      "text-base font-semibold tracking-[-0.4px] pb-2 border-b-2 transition-colors",
-                      selectedTab === tab
-                        ? "text-[#111111] border-[#111111]"
-                        : "text-[#898989] border-transparent",
+                      "text-[15px] font-semibold tracking-[-0.3px] py-3 transition-all relative",
+                      selectedTab === tab ? "text-[#111111]" : "text-[#898989]",
                     )}
                   >
                     {tab}
+                    {selectedTab === tab && (
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[2px] bg-[#111111]" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -509,9 +503,14 @@ export default function TripDetailPage() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[#556574]">
+                      <button
+                        className="text-sm font-semibold text-[#556574] bg-transparent border-none p-0 cursor-pointer"
+                        onClick={() =>
+                          router.push(`/trips/${tripId}/camera/receipt`)
+                        }
+                      >
                         영수증 등록
-                      </span>
+                      </button>
                       <span className="text-sm font-semibold text-[#556574]">
                         내역
                       </span>

@@ -24,20 +24,20 @@ export default function SearchPage() {
         </div>
 
         {/* Top Search Bar Overlay */}
-        <div className="absolute top-0 left-0 right-0 px-5 pt-12 pb-4 z-20">
+        <div className="absolute top-0 left-0 right-0 px-5 pt-6 pb-4 z-20">
           <div
-            className="flex items-center gap-3 bg-white h-14 px-4 rounded-2xl shadow-[0px_4px_16_rgba(0,0,0,0.08)] border border-[#f2f4f6] cursor-pointer"
+            className="flex items-center gap-3 bg-white h-14 px-4 rounded-xl shadow-[0px_4px_16_rgba(0,0,0,0.08)] border border-[#f2f4f6] cursor-pointer"
             onClick={() => router.push("/search/input")}
           >
             <Image
-              src="/icons/location.svg"
-              alt="location"
-              width={16}
-              height={19}
-              className="grayscale opacity-60"
+              src="/icons/search.svg"
+              alt="search"
+              width={20}
+              height={20}
+              className="opacity-50"
             />
             <div className="flex-1 text-[16px] font-medium text-[#abb1b9]">
-              어디로 가고 싶으신가요?
+              장소, 숙소, 교통버스 검색
             </div>
           </div>
         </div>

@@ -36,24 +36,26 @@ export default function HomePage() {
             onClick={handleCardClick}
           >
             {/* Trip Info */}
-            <div className="flex flex-col gap-[5px] mb-[14px]">
-              <span className="text-[15px] font-normal tracking-[-0.5px] text-[#6d818f]">
-                친구와 함께
-              </span>
-              <h2 className="text-[22px] font-bold tracking-[-0.5px] text-[#111111]">
+            <div className="flex flex-col gap-[5px] mb-[10px]">
+              <div className="flex justify-between border-b border-[#d1dbe2] pb-3">
+                <span className="text-[15px] font-normal tracking-[-0.5px] text-[#6d818f]">
+                  친구와 함께
+                </span>
+                <span className="text-[15px] font-normal tracking-[-0.5px] text-[#6d818f]">
+                  2026.02.10 ~ 02.14
+                </span>
+              </div>
+              <h2 className="text-[22px] font-bold tracking-[-0.5px] text-[#111111] pt-3">
                 제주도 여행
               </h2>
-              <span className="text-[15px] font-normal tracking-[-0.5px] text-[#556574]">
-                2026.02.10 ~ 02.14
-              </span>
             </div>
 
             {/* Category Tags */}
-            <div className="flex gap-1 mb-[38px]">
+            <div className="flex gap-1 mb-[32px]">
               {["자연", "맛집", "카페", "쇼핑"].map((tag) => (
                 <span
                   key={tag}
-                  className="text-[14px] font-normal text-[#6d818f] px-3 py-1.5 rounded-lg bg-white/40"
+                  className="text-[14px] font-normal text-[#6d818f] px-3 py-1.5 rounded-lg bg-white/80"
                 >
                   {tag}
                 </span>
@@ -61,26 +63,26 @@ export default function HomePage() {
             </div>
 
             {/* Budget Section */}
-            <div className="flex flex-col gap-2 mb-6">
+            <div className="flex flex-col gap-2 mb-4">
               <div className="flex justify-between items-center">
                 <span className="text-[15px] font-normal tracking-[-0.5px] text-[#556574]">
                   남은 예산
                 </span>
                 <span className="text-[15px] font-normal tracking-[-0.5px] text-[#556574]">
-                  450,000원 / 500,000원
+                  <span className="font-semibold">412,000원</span> / 500,000원
                 </span>
               </div>
               {/* Progress Bar */}
-              <div className="relative w-full h-3 bg-white/30 rounded-full overflow-hidden">
+              <div className="relative w-full h-3 bg-white rounded-full overflow-hidden border border-[#111111]">
                 <div
                   className="absolute top-0 left-0 h-full bg-[#111111] rounded-full"
-                  style={{ width: "94%" }}
+                  style={{ width: "80%" }}
                 />
               </div>
             </div>
 
             {/* Budget Detail Button */}
-            <button className="w-full bg-white rounded-lg py-3 mb-6 text-[14px] font-semibold text-[#556574]">
+            <button className="w-full bg-white rounded-md py-3 mb-8 text-[14px] font-semibold text-[#556574]">
               예산 자세히 보기
             </button>
 
@@ -114,9 +116,9 @@ export default function HomePage() {
                 <Image
                   src="/icons/map-pin.svg"
                   alt="map"
-                  width={23}
-                  height={23}
-                  className="w-[23px] h-[23px]"
+                  width={28}
+                  height={28}
+                  className="w-7 h-7"
                 />
                 <span className="text-[14px] font-semibold text-[#556574]">
                   지도 보기
@@ -127,8 +129,8 @@ export default function HomePage() {
         </div>
 
         {/* Popular Travel Routes Section */}
-        <div className="mb-6 px-5">
-          <div className="flex justify-between items-center mb-4">
+        <div className="mb-8 mt-12">
+          <div className="flex justify-between items-center mb-4 px-5">
             <h2 className="text-[18px] font-bold tracking-[-0.5px] text-[#111111]">
               제주도 인기 여행 코스 TOP10
             </h2>
@@ -140,39 +142,48 @@ export default function HomePage() {
               className="w-[9px] h-[15px]"
             />
           </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5">
             {[
               {
                 img: "/images/jeju-beach.png",
                 text: "금릉해변과 카페 맛집 코스",
-                width: 120,
+                width: 140,
               },
               {
                 img: "/images/jeju-hill.png",
                 text: "제주 오름과 먹방 그리고 좋은 숙소",
-                width: 120,
+                width: 140,
               },
               {
                 img: "/images/jeju-forest.png",
                 text: "제주 여행지 느낌나는 코스 추천!",
-                width: 91,
+                width: 140,
+              },
+              {
+                img: "/images/jeju-beach.png",
+                text: "해안도로 드라이브 코스",
+                width: 140,
+              },
+              {
+                img: "/images/jeju-hill.png",
+                text: "한라산 등반 코스",
+                width: 140,
               },
             ].map((item, index) => (
               <div key={index} className="flex flex-col gap-3 flex-shrink-0">
                 <div
-                  className="rounded-lg overflow-hidden"
-                  style={{ width: `${item.width}px`, height: "120px" }}
+                  className="rounded-md overflow-hidden relative"
+                  style={{ width: `${item.width}px`, height: "140px" }}
                 >
                   <Image
                     src={item.img}
                     alt="travel route"
-                    width={item.width}
-                    height={120}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
                 <p
-                  className="text-[15px] font-medium tracking-[-0.06px] leading-[21px] text-[#111111]"
+                  className="text-[15px] font-medium tracking-[-0.06px] leading-[21px] text-[#111111] line-clamp-2"
                   style={{ width: `${item.width}px` }}
                 >
                   {item.text}
@@ -183,7 +194,7 @@ export default function HomePage() {
         </div>
 
         {/* Popular Restaurants Section */}
-        <div className="mb-6">
+        <div className="mb-6 mt-12">
           <div className="flex justify-between items-center mb-4 px-5">
             <h2 className="text-[18px] font-bold tracking-[-0.5px] text-[#111111]">
               제주도 인기 맛집 리스트
@@ -196,36 +207,47 @@ export default function HomePage() {
               className="w-[9px] h-[15px]"
             />
           </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0 px-5">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5">
             {[
               {
                 img: "/images/jeju-beach.png",
                 text: "금릉해변과 카페 맛집 코스",
-                width: 120,
+                width: 140,
               },
               {
                 img: "/images/jeju-hill.png",
-                text: "금릉해변과 카페 맛집 코스",
-                width: 120,
+                text: "제주 오름과 먹방 그리고 좋은 숙소",
+                width: 140,
               },
               {
                 img: "/images/jeju-forest.png",
-                text: "금릉해변과 카페 맛집 코스",
-                width: 120,
+                text: "제주 여행지 느낌나는 코스 추천!",
+                width: 140,
+              },
+              {
+                img: "/images/jeju-beach.png",
+                text: "해안도로 드라이브 코스",
+                width: 140,
               },
             ].map((item, index) => (
-              <div
-                key={index}
-                className="rounded-lg overflow-hidden flex-shrink-0"
-                style={{ width: `${item.width}px`, height: "120px" }}
-              >
-                <Image
-                  src={item.img}
-                  alt="restaurant"
-                  width={item.width}
-                  height={120}
-                  className="w-full h-full object-cover"
-                />
+              <div key={index} className="flex flex-col gap-3 flex-shrink-0">
+                <div
+                  className="rounded-md overflow-hidden relative"
+                  style={{ width: `${item.width}px`, height: "140px" }}
+                >
+                  <Image
+                    src={item.img}
+                    alt="restaurant"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <p
+                  className="text-[15px] font-medium tracking-[-0.06px] leading-[21px] text-[#111111] line-clamp-2"
+                  style={{ width: `${item.width}px` }}
+                >
+                  {item.text}
+                </p>
               </div>
             ))}
           </div>

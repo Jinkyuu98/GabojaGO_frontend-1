@@ -31,11 +31,11 @@ export const useOnboardingStore = create(
 
           // Helper map for companion labels (Should match CompanionSelection options)
           const COMPANION_MAP = {
-            alone: "혼자",
-            couple: "연인과",
-            friends: "친구와",
-            family: "가족과",
-            parents: "부모님과",
+            alone: "나홀로",
+            couple: "연인과 함께",
+            friends: "친구와 함께",
+            family: "가족과 함께",
+            parents: "부모님과 함께",
             etc: "기타",
           };
 

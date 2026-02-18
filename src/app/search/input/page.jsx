@@ -76,22 +76,25 @@ export default function SearchInputPage() {
     <MobileContainer>
       <div className="w-full h-screen bg-white flex flex-col">
         {/* Header */}
-        <header className="flex items-center h-14 px-4 bg-white border-b border-[#f2f4f6]">
-          <button onClick={() => router.back()} className="p-2 -ml-2">
-            <Image
-              src="/icons/arrow-left.svg"
-              alt="back"
-              width={20}
-              height={16}
-            />
-          </button>
-          <h1 className="flex-1 text-center mr-8 text-[17px] font-bold text-[#111111]">
-            장소 검색
-          </h1>
-        </header>
+        <div className="fixed top-0 left-0 right-0 px-6 pt-4 pb-4 flex items-center justify-between bg-white z-10 max-w-[430px] mx-auto">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.back()}>
+              <Image
+                src="/icons/arrow-left.svg"
+                alt="back"
+                width={20}
+                height={16}
+                className="w-5 h-4"
+              />
+            </button>
+            <h1 className="text-[18px] font-semibold text-[#111111] tracking-[-0.5px]">
+              장소 검색
+            </h1>
+          </div>
+        </div>
 
         {/* Search Input Section */}
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 mt-[60px]">
           <div className="flex items-center gap-3 bg-white h-14 px-4 rounded-2xl shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-[#f2f4f6]">
             <Image
               src="/icons/location.svg"
