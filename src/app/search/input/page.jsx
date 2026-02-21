@@ -35,30 +35,40 @@ export default function SearchInputPage() {
       name: "제주산방산탄산온천",
       address: "제주특별자치도 서귀포시 안덕면 사계북로 41번길 192",
       category: "온천",
+      rating: 4.8,
+      reviewCount: 128,
     },
     {
       id: 2,
       name: "산방산",
       address: "제주특별자치도 서귀포시 안덕면 사계리",
       category: "자연",
+      rating: 4.5,
+      reviewCount: 85,
     },
     {
       id: 3,
       name: "카멜리아 힐",
       address: "제주특별자치도 서귀포시 안덕면 병악로 166",
       category: "테마파크",
+      rating: 4.7,
+      reviewCount: 240,
     },
     {
       id: 4,
       name: "헬로키티아일랜드",
       address: "제주특별자치도 서귀포시 안덕면 한창로 340",
       category: "박물관",
+      rating: 4.3,
+      reviewCount: 156,
     },
     {
       id: 5,
       name: "제주신화월드",
       address: "제주특별자치도 서귀포시 안덕면 신화역사로304번길 38",
       category: "리조트",
+      rating: 4.6,
+      reviewCount: 312,
     },
   ];
 
@@ -95,13 +105,13 @@ export default function SearchInputPage() {
 
         {/* Search Input Section */}
         <div className="px-5 py-4 mt-[60px]">
-          <div className="flex items-center gap-3 bg-white h-14 px-4 rounded-2xl shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-[#f2f4f6]">
+          <div className="flex items-center gap-3 bg-[#f5f7f9] h-14 px-4 rounded-xl border border-[#f2f4f6] transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-[#7a28fa]/20 focus-within:border-[#7a28fa]">
             <Image
-              src="/icons/location.svg"
-              alt="location"
-              width={16}
-              height={19}
-              className="grayscale opacity-60"
+              src="/icons/search.svg"
+              alt="search"
+              width={20}
+              height={20}
+              className="opacity-50"
             />
             <input
               ref={inputRef}
@@ -109,7 +119,7 @@ export default function SearchInputPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="어디로 가고 싶으신가요?"
-              className="flex-1 text-[16px] font-medium text-[#111111] placeholder:text-[#abb1b9] outline-none"
+              className="flex-1 bg-transparent text-[16px] font-medium text-[#111111] placeholder:text-[#abb1b9] outline-none"
             />
           </div>
         </div>
@@ -121,7 +131,8 @@ export default function SearchInputPage() {
               {filteredPlaces.map((place) => (
                 <div
                   key={place.id}
-                  className="flex flex-col gap-1 cursor-pointer"
+                  onClick={() => router.push(`/search/place/${place.id}`)}
+                  className="flex flex-col gap-1 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded-lg transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-[16px] font-semibold text-[#111111]">
@@ -131,9 +142,19 @@ export default function SearchInputPage() {
                       {place.category}
                     </span>
                   </div>
-                  <p className="text-[13px] text-[#898989] line-clamp-1">
-                    {place.address}
-                  </p>
+                  <div className="flex flex-col gap-0.5 mt-0.5">
+                    <p className="text-[13px] text-[#898989] line-clamp-1">
+                      {place.address}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-[#7a28fa]">
+                        ★ {place.rating}
+                      </span>
+                      <span className="text-[11px] text-[#abb1b9]">
+                        ({place.reviewCount})
+                      </span>
+                    </div>
+                  </div>
                   <div className="h-[1px] bg-[#f2f4f6] mt-4" />
                 </div>
               ))}
