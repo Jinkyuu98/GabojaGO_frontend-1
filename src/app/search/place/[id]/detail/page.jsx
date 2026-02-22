@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { MobileContainer } from "../../../../../components/layout/MobileContainer";
+import { registerPlace } from "../../../../../services/place";
 
 /**
  * [NEW] SearchPlaceDetailInfoPage
@@ -14,16 +15,16 @@ export default function SearchPlaceDetailInfoPage() {
   const params = useParams();
   const { id } = params;
 
+  // [ADD] 로컬 스토리지 데이터 동기화 및 로딩 상태
+  const [placeData, setPlaceData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
+
   // Placeholder Data (서버에서 추가 정보를 제공하지 않을 경우 대비)
-  const [placeData, setPlaceData] = useState({
-    name: "장소 정보",
-    category: "카테고리",
-    address: "주소 정보",
+  const defaultExtraInfo = {
     description: `이 장소는 방문객들에게 특별한 경험을 제공하는 제주도의 대표적인 명소 중 하나입니다. 
     아름다운 풍경과 함께 여유로운 시간을 보내기에 최적화된 공간이며, 가족, 친구, 연인과 함께 방문하기 좋습니다.
     탄산 온천 시설부터 휴게 공간까지 완벽하게 갖추어져 방문객들의 만족도가 매우 높습니다.`,
-    rating: 0,
-    reviewCount: 0,
     reviews: [
       {
         user: "김여행",
@@ -42,25 +43,45 @@ export default function SearchPlaceDetailInfoPage() {
         content: "인생 온천을 만났습니다. 시설이 깨끗해서 너무 좋았어요.",
       },
     ],
-  });
+  };
 
-  // [ADD] 로컬 스토리지에서 실제 데이터 동기화
+  // [ADD] 로컬 스토리지에서 실제 데이터 동기화 (place_ID 키 활용)
   useEffect(() => {
     const savedData = localStorage.getItem(`place_${id}`);
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        setPlaceData((prev) => ({
-          ...prev,
+        setPlaceData({
+          ...defaultExtraInfo,
           ...parsed,
-          description: parsed.description || prev.description, // 서버에 설명이 있으면 사용
-          reviews: parsed.reviews || prev.reviews, // 서버에 리뷰가 있으면 사용
-        }));
+          description: parsed.description || defaultExtraInfo.description,
+          reviews: parsed.reviews || defaultExtraInfo.reviews,
+        });
+
+        // [ADD] 이미 찜한 장소인지 확인
+        const savedList = JSON.parse(
+          localStorage.getItem("saved_places") || "[]",
+        );
+        const exists = savedList.some(
+          (p) => String(p.id) === String(parsed.id),
+        );
+        setIsSaved(exists);
       } catch (e) {
         console.error("Failed to parse saved place data", e);
       }
     }
+    setIsLoading(false);
   }, [id]);
+
+  if (isLoading || !placeData) {
+    return (
+      <MobileContainer>
+        <div className="w-full h-screen bg-white flex items-center justify-center">
+          <p className="text-[#abb1b9] animate-pulse">정보를 불러오는 중...</p>
+        </div>
+      </MobileContainer>
+    );
+  }
 
   return (
     <MobileContainer>
@@ -84,31 +105,52 @@ export default function SearchPlaceDetailInfoPage() {
           </h1>
         </div>
 
-        {/* Hero Image */}
-        <div className="relative w-full h-[320px] min-h-[320px] flex-shrink-0 mt-14 bg-gray-100 overflow-hidden">
-          <Image
-            src="/images/map-background.png" // Temporary placeholder
-            alt="place hero"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-8 left-6 right-6">
-            <span className="inline-block text-[11px] font-bold text-[#7a28fa] bg-white px-2 py-0.5 rounded-md mb-3 shadow-sm">
-              {placeData.category}
-            </span>
-            <h2 className="text-[26px] font-bold text-white mb-2 leading-tight tracking-[-1px]">
-              {placeData.name}
-            </h2>
-            <p className="text-[14px] text-white/90 leading-normal">
-              {placeData.address}
-            </p>
+        {/* Hero Image - [MOD] 이미지가 있을 때만 표시 및 실제 데이터 사용 */}
+        {placeData.image && (
+          <div className="relative w-full h-[320px] min-h-[320px] flex-shrink-0 mt-14 bg-gray-100 overflow-hidden">
+            <Image
+              src={placeData.image}
+              alt={placeData.name}
+              fill
+              className="object-cover object-center"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div className="absolute bottom-8 left-6 right-6">
+              <span className="inline-block text-[11px] font-bold text-[#7a28fa] bg-white px-2 py-0.5 rounded-md mb-3 shadow-sm">
+                {placeData.category}
+              </span>
+              <h2 className="text-[26px] font-bold text-white mb-2 leading-tight tracking-[-1px]">
+                {placeData.name}
+              </h2>
+              <p className="text-[14px] text-white/90 leading-normal">
+                {placeData.address}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Content Section */}
-        <div className="flex flex-col gap-8 p-6 pb-20">
+        <div
+          className={`flex flex-col gap-8 p-6 pb-20 ${placeData.image ? "" : "mt-20"}`}
+        >
+          {/* [ADD] 이미지가 없을 경우 제목과 주소를 상단에 표시 */}
+          {!placeData.image && (
+            <div className="flex flex-col gap-2 mb-2">
+              <div className="flex">
+                <span className="text-[12px] font-semibold text-[#7a28fa] bg-[#f9f5ff] px-2 py-0.5 rounded">
+                  {placeData.category}
+                </span>
+              </div>
+              <h2 className="text-[28px] font-bold text-[#111111] tracking-[-1px]">
+                {placeData.name}
+              </h2>
+              <p className="text-[15px] text-[#6e6e6e] tracking-[-0.3px]">
+                {placeData.address}
+              </p>
+            </div>
+          )}
+
           {/* Description */}
           <section>
             <h3 className="text-[18px] font-bold text-[#111111] mb-3">
@@ -164,12 +206,56 @@ export default function SearchPlaceDetailInfoPage() {
 
         {/* [ADD] 고정 하단 버튼 영역 */}
         <div className="sticky bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-[#f2f4f6] z-30">
-          <button
-            onClick={() => router.push("/search?saved=true")}
-            className="w-full h-[56px] bg-[#111111] text-white rounded-2xl text-[16px] font-bold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg"
-          >
-            찜한 장소로 등록하기
-          </button>
+          {!isSaved && (
+            <button
+              onClick={async () => {
+                try {
+                  // [ADD] 장소 등록 API 호출 (PC 버전과 동일하게 개별 예외 처리)
+                  try {
+                    await registerPlace({
+                      id: placeData.id,
+                      name: placeData.name,
+                      address: placeData.address,
+                      category: placeData.category,
+                      latitude: placeData.latitude,
+                      longitude: placeData.longitude,
+                      phone: placeData.phone,
+                      link: placeData.link,
+                    });
+                  } catch (e) {
+                    console.error(
+                      "API registration failed, using local storage fallback:",
+                      e,
+                    );
+                  }
+
+                  // [ADD] 로컬 스토리지 저장
+                  const savedList = JSON.parse(
+                    localStorage.getItem("saved_places") || "[]",
+                  );
+                  if (
+                    !savedList.find(
+                      (p) => String(p.id) === String(placeData.id),
+                    )
+                  ) {
+                    savedList.push(placeData);
+                    localStorage.setItem(
+                      "saved_places",
+                      JSON.stringify(savedList),
+                    );
+                  }
+
+                  router.push("/search?saved=true");
+                } catch (error) {
+                  console.error("Local save failed:", error);
+                  router.push("/search?saved=true");
+                }
+              }}
+              className="w-full h-[56px] bg-[#111111] text-white rounded-2xl text-[16px] font-bold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg"
+            >
+              찜한 장소로 등록하기
+            </button>
+          )}
         </div>
       </div>
     </MobileContainer>

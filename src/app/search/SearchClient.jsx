@@ -8,7 +8,7 @@ import { clsx } from "clsx";
 import { MobileContainer } from "../../components/layout/MobileContainer";
 import { BottomNavigation } from "../../components/layout/BottomNavigation";
 import { Toast } from "../../components/common/Toast";
-import { searchPlaces } from "../../services/place";
+import { searchPlaces, registerPlace } from "../../services/place";
 
 const HighlightText = ({ text, keyword }) => {
   if (!keyword.trim()) return <span>{text}</span>;
@@ -30,9 +30,7 @@ const HighlightText = ({ text, keyword }) => {
 
 export default function SearchClient() {
   const mapRef = useRef(null);
-  const detailMapRef = useRef(null); // [ADD] 상세 패널용 전용 지도 레퍼런스 추가
   const mapInstance = useRef(null);
-  const detailMapInstance = useRef(null); // [ADD] 상세 패널용 지도 인스턴스 추가
   const markersRef = useRef([]);
   const overlayRef = useRef(null);
   const router = useRouter();
@@ -47,9 +45,30 @@ export default function SearchClient() {
   const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
+    // [ADD] 장소 자동 선택 처리 (select 쿼리 파라미터 기반)
+    const selectId = searchParams.get("select");
+    if (selectId) {
+      const savedData = localStorage.getItem(`place_${selectId}`);
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          setSelectedPlace(parsed);
+          setIsSidePanelOpen(true);
+          setIsSecondaryPanelOpen(true);
+        } catch (e) {
+          console.error("Failed to parse place data for select param", e);
+        }
+      }
+    }
+
     if (searchParams.get("saved") === "true") {
       setIsToastVisible(true);
-      window.history.replaceState({}, "", "/search");
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete("saved");
+      newParams.delete("select"); // 정리가 필요할 수 있음
+      router.replace(
+        `/search${newParams.toString() ? "?" + newParams.toString() : ""}`,
+      );
     }
   }, [searchParams]);
 
@@ -71,20 +90,29 @@ export default function SearchClient() {
       latitude: parseFloat(item.latitude),
       link: item.link,
       phone: item.phone,
+      image:
+        item.first_image || item.image_url || item.image || item.thumbnail_url,
     }));
   };
 
-  useEffect(() => {
+  const initMap = () => {
     if (!window.kakao || !mapRef.current) return;
 
     window.kakao.maps.load(() => {
-      const center = new window.kakao.maps.LatLng(37.5665, 126.978);
+      if (mapInstance.current) return;
 
+      const center = new window.kakao.maps.LatLng(37.5665, 126.978);
       mapInstance.current = new window.kakao.maps.Map(mapRef.current, {
         center,
         level: 4,
       });
     });
+  };
+
+  useEffect(() => {
+    if (window.kakao) {
+      initMap();
+    }
   }, []);
 
   useEffect(() => {
@@ -138,45 +166,6 @@ export default function SearchClient() {
     }
   }, [searchResults, selectedPlace]);
 
-  // [ADD] 상세 패널이 열릴 때 전용 지도를 초기화하거나 위치를 맞춤
-  useEffect(() => {
-    if (
-      !isSecondaryPanelOpen ||
-      !selectedPlace ||
-      !window.kakao ||
-      !detailMapRef.current
-    ) {
-      if (detailMapInstance.current) {
-        detailMapInstance.current = null;
-      }
-      return;
-    }
-
-    window.kakao.maps.load(() => {
-      const position = new window.kakao.maps.LatLng(
-        selectedPlace.latitude,
-        selectedPlace.longitude,
-      );
-
-      if (!detailMapInstance.current) {
-        detailMapInstance.current = new window.kakao.maps.Map(
-          detailMapRef.current,
-          {
-            center: position,
-            level: 3,
-          },
-        );
-
-        // 상세 패널 마커
-        const marker = new window.kakao.maps.Marker({ position });
-        marker.setMap(detailMapInstance.current);
-      } else {
-        detailMapInstance.current.setCenter(position);
-        detailMapInstance.current.relayout();
-      }
-    });
-  }, [isSecondaryPanelOpen, selectedPlace]);
-
   useEffect(() => {
     const fetchResults = async () => {
       if (!searchQuery.trim()) {
@@ -208,7 +197,8 @@ export default function SearchClient() {
     <MobileContainer showNav={true} className="!max-w-none">
       <Script
         src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=57dd33d25e0269c9c37a3ea70b3a3b4f&autoload=false&libraries=services"
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
+        onLoad={initMap}
       />
       <div className="relative w-full h-screen bg-white overflow-hidden lg:flex lg:flex-row">
         <div
@@ -247,13 +237,15 @@ export default function SearchClient() {
 
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex">
+                        <span className="text-[12px] font-semibold text-[#7a28fa] bg-[#f9f5ff] px-2 py-0.5 rounded">
+                          {selectedPlace.category}
+                        </span>
+                      </div>
                       <h1 className="text-[24px] font-bold text-[#111111] tracking-[-1px]">
                         {selectedPlace.name}
                       </h1>
-                      <span className="text-[12px] font-semibold text-[#7a28fa] bg-[#f9f5ff] px-2 py-0.5 rounded">
-                        {selectedPlace.category}
-                      </span>
                     </div>
                     <div className="flex flex-col gap-1 mt-1">
                       <p className="text-[14px] text-[#6e6e6e] leading-relaxed">
@@ -279,11 +271,49 @@ export default function SearchClient() {
                     </button>
 
                     <button
-                      onClick={() => {
-                        setSelectedPlace(null);
-                        setSearchQuery("");
-                        setIsSecondaryPanelOpen(false);
-                        setIsToastVisible(true);
+                      onClick={async () => {
+                        try {
+                          // [ADD] 장소 등록 API 호출 (기존 유지)
+                          try {
+                            await registerPlace({
+                              id: selectedPlace.id,
+                              name: selectedPlace.name,
+                              address: selectedPlace.address,
+                              category: selectedPlace.category,
+                              latitude: selectedPlace.latitude,
+                              longitude: selectedPlace.longitude,
+                              phone: selectedPlace.phone,
+                              link: selectedPlace.link,
+                            });
+                          } catch (e) {
+                            console.error(
+                              "API registration failed, falling back to local storage only:",
+                              e,
+                            );
+                          }
+
+                          // [ADD] 로컬 스토리지에도 저장하여 즉시 확인 가능하도록 처리
+                          const savedList = JSON.parse(
+                            localStorage.getItem("saved_places") || "[]",
+                          );
+                          if (
+                            !savedList.find((p) => p.id === selectedPlace.id)
+                          ) {
+                            savedList.push(selectedPlace);
+                            localStorage.setItem(
+                              "saved_places",
+                              JSON.stringify(savedList),
+                            );
+                          }
+
+                          setSelectedPlace(null);
+                          setSearchQuery("");
+                          setIsSecondaryPanelOpen(false);
+                          setIsToastVisible(true);
+                        } catch (error) {
+                          console.error("Failed to register place:", error);
+                          // 에러 처리 로직 (필요시 추가 토스트 등)
+                        }
                       }}
                       className="w-full h-[56px] bg-[#111111] text-white rounded-2xl text-[16px] font-bold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg"
                     >
@@ -355,7 +385,11 @@ export default function SearchClient() {
                                 `place_${place.id}`,
                                 JSON.stringify(place),
                               );
-                              setSelectedPlace(place);
+                              if (window.innerWidth < 1024) {
+                                router.push(`/search/place/${place.id}`);
+                              } else {
+                                setSelectedPlace(place);
+                              }
                             }}
                             className="flex flex-col gap-1 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded-lg transition-colors group"
                           >
@@ -495,24 +529,44 @@ export default function SearchClient() {
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-hide">
-              <div className="relative w-full h-[300px] bg-gray-100">
-                {/* [MOD] 전용 레퍼런스 detailMapRef 사용 */}
-                <div
-                  ref={detailMapRef}
-                  className="absolute inset-0 w-full h-full"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-8 left-6 right-6">
-                  <h1 className="text-[26px] font-bold text-white mb-2 tracking-[-1px]">
-                    {selectedPlace?.name}
-                  </h1>
-                  <p className="text-[14px] text-white/90">
-                    {selectedPlace?.address}
-                  </p>
+              {/* [MOD] 지도를 이미지로 변경 및 존재할 때만 표시 */}
+              {selectedPlace?.image && (
+                <div className="relative w-full h-[300px] bg-gray-100">
+                  <Image
+                    src={selectedPlace.image}
+                    alt={selectedPlace.name}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-8 left-6 right-6">
+                    <h1 className="text-[26px] font-bold text-white mb-2 tracking-[-1px]">
+                      {selectedPlace?.name}
+                    </h1>
+                    <p className="text-[14px] text-white/90">
+                      {selectedPlace?.address}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="p-6">
+                {/* [ADD] 이미지가 없을 경우 제목과 주소를 본문에 표시 */}
+                {!selectedPlace?.image && (
+                  <div className="mb-8 p-1 flex flex-col gap-2">
+                    <div className="flex">
+                      <span className="text-[12px] font-semibold text-[#7a28fa] bg-[#f9f5ff] px-2 py-0.5 rounded">
+                        {selectedPlace?.category}
+                      </span>
+                    </div>
+                    <h1 className="text-[28px] font-bold text-[#111111] mb-2 tracking-[-1px]">
+                      {selectedPlace?.name}
+                    </h1>
+                    <p className="text-[15px] text-[#6e6e6e]">
+                      {selectedPlace?.address}
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-8">
                   <section>
                     <h3 className="text-[16px] font-bold text-[#111111] mb-3">

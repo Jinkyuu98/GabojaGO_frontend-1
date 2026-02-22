@@ -144,7 +144,6 @@ export default function SearchInputPage() {
                 <div
                   key={place.id}
                   onClick={() => {
-                    // [MOD] 로컬 스토리지에 결과 데이터 임시 저장 (상세 페이지에서 사용 가능하도록)
                     localStorage.setItem(
                       `place_${place.id}`,
                       JSON.stringify(place),

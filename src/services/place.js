@@ -13,3 +13,17 @@ export const searchPlaces = (query) =>
  * (현재 백엔드 명세에는 별도 조회가 없으며 검색 결과에 상세 정보가 포함됨)
  */
 // export const getPlaceDetail = (id) => api.get(`/places/${id}`);
+
+/**
+ * 장소 등록 API
+ * @param {Object} placeData - 등록할 장소 데이터
+ * @returns {Promise}
+ */
+export const registerPlace = (placeData) =>
+  api.post("/location/register", placeData);
+
+/**
+ * 등록된 장소 목록 조회 API
+ * @returns {Promise}
+ */
+export const getSavedPlaces = () => api.get("/location/register");

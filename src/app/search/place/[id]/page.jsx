@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Script from "next/script";
 import { MobileContainer } from "../../../../components/layout/MobileContainer";
+import { registerPlace } from "../../../../services/place";
 
 /**
  * [ADD] SearchPlaceDetailPage
@@ -18,26 +19,38 @@ export default function SearchPlaceDetailPage() {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
-  const [placeData, setPlaceData] = useState({
-    name: "장소 정보",
-    category: "...",
-    address: "주소를 불러오는 중입니다",
-    rating: 0,
-    reviewCount: 0,
-    latitude: 37.5665,
-    longitude: 126.978,
-  });
+  const [placeData, setPlaceData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
 
-  // [ADD] 로컬 스토리지에서 실제 데이터 불러오기
+  // [ADD] 바텀시트 드래그 상태 관리
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const startY = useRef(0);
+  const sheetRef = useRef(null);
+
+  // [ADD] 로컬 스토리지에서 실제 데이터 불러오기 (place_ID 키 활용)
   useEffect(() => {
     const savedData = localStorage.getItem(`place_${id}`);
     if (savedData) {
       try {
-        setPlaceData(JSON.parse(savedData));
+        const parsed = JSON.parse(savedData);
+        setPlaceData(parsed);
+
+        // [ADD] 이미 찜한 장소인지 확인
+        const savedList = JSON.parse(
+          localStorage.getItem("saved_places") || "[]",
+        );
+        const exists = savedList.some(
+          (p) => String(p.id) === String(parsed.id),
+        );
+        setIsSaved(exists);
       } catch (e) {
         console.error("Failed to parse saved place data", e);
       }
     }
+    setIsLoading(false);
   }, [id]);
 
   // [ADD] 지도 초기화 및 마커 표시
@@ -90,10 +103,71 @@ export default function SearchPlaceDetailPage() {
   };
 
   useEffect(() => {
-    if (window.kakao) {
+    if (window.kakao && placeData) {
       initMap();
     }
   }, [placeData]);
+
+  if (!placeData) {
+    return (
+      <MobileContainer>
+        <div className="w-full h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+          {isLoading ? (
+            <p className="text-[#abb1b9] animate-pulse">
+              정보를 불러오는 중...
+            </p>
+          ) : (
+            <>
+              <p className="text-[#abb1b9] mb-4">
+                장소 정보를 찾을 수 없습니다.
+              </p>
+              <button
+                onClick={() => router.back()}
+                className="px-6 py-2 bg-[#111111] text-white rounded-xl font-bold"
+              >
+                뒤로가기
+              </button>
+            </>
+          )}
+        </div>
+      </MobileContainer>
+    );
+  }
+
+  // [ADD] 터치 이벤트 핸들러
+  const handleTouchStart = (e) => {
+    startY.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - startY.current;
+
+    // [MOD] 드래그 범위 조정: 최소화 상태에서도 핸들이 보이도록 제한
+    // 시트가 약간만 보이게 하기 위해 최대 250px 정도로 제한 (전체 높이가 약 300px 가정)
+    if (isMinimized) {
+      const newY = Math.min(Math.max(deltaY + 250, 0), 300);
+      setDragY(newY);
+    } else {
+      const newY = Math.max(deltaY, 0);
+      setDragY(newY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    // [MOD] 임계값 및 고정 위치 조정 - 최소화 상태에서도 핸들이 충분히 보이도록 함
+    // (바텀시트의 콘텐츠 일부와 핸들이 함께 노출됨)
+    if (dragY > 100) {
+      setIsMinimized(true);
+      setDragY(220); // 시트 높이에 따라 조절 (핸들이 화면 하단에서 약 80px 정도 노출되게)
+    } else {
+      setIsMinimized(false);
+      setDragY(0); // 완전히 올린 상태
+    }
+  };
 
   return (
     <MobileContainer>
@@ -128,9 +202,20 @@ export default function SearchPlaceDetailPage() {
         </div>
 
         {/* [ADD] 하단 바텀시트 섹션 */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 bg-white rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-5 pt-8 pb-10 max-w-[430px] mx-auto">
-          {/* 드래그 핸들 (시각용) */}
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-[#e5ebf2] rounded-full" />
+        <div
+          ref={sheetRef}
+          className={`absolute bottom-0 left-0 right-0 z-20 bg-white rounded-t-[32px] shadow-[0_-12px_40px_rgba(0,0,0,0.12)] px-5 pt-10 pb-10 max-w-[430px] mx-auto transition-transform ${isDragging ? "" : "duration-300 ease-out"}`}
+          style={{ transform: `translateY(${dragY}px)` }}
+        >
+          {/* [MOD] 드래그 핸들: 시인성 강화 (두께, 색상, 높이 조정) */}
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className="absolute top-0 left-0 right-0 h-10 flex items-start justify-center cursor-grab active:cursor-grabbing pt-3"
+          >
+            <div className="w-12 h-1.5 bg-[#d1d5db] rounded-full shadow-inner" />
+          </div>
 
           <div className="flex flex-col gap-4">
             <div className="flex items-start justify-between">
@@ -167,15 +252,56 @@ export default function SearchPlaceDetailPage() {
               >
                 상세보기
               </button>
-              <button
-                onClick={() => {
-                  // [MOD] Instead of AlertDialog, move to search page with param to show toast
-                  router.push("/search?saved=true");
-                }}
-                className="w-full h-[56px] bg-[#111111] text-white rounded-2xl text-[16px] font-bold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg"
-              >
-                찜한 장소로 등록하기
-              </button>
+              {!isSaved && (
+                <button
+                  onClick={async () => {
+                    try {
+                      // [ADD] 장소 등록 API 호출 (PC 버전과 동일하게 개별 예외 처리)
+                      try {
+                        await registerPlace({
+                          id: placeData.id,
+                          name: placeData.name,
+                          address: placeData.address,
+                          category: placeData.category,
+                          latitude: placeData.latitude,
+                          longitude: placeData.longitude,
+                          phone: placeData.phone,
+                          link: placeData.link,
+                        });
+                      } catch (e) {
+                        console.error(
+                          "API registration failed, using local storage fallback:",
+                          e,
+                        );
+                      }
+
+                      // [ADD] 로컬 스토리지 저장 (API 실패 여부와 상관없이 수행되어야 함)
+                      const savedList = JSON.parse(
+                        localStorage.getItem("saved_places") || "[]",
+                      );
+                      if (
+                        !savedList.find(
+                          (p) => String(p.id) === String(placeData.id),
+                        )
+                      ) {
+                        savedList.push(placeData);
+                        localStorage.setItem(
+                          "saved_places",
+                          JSON.stringify(savedList),
+                        );
+                      }
+
+                      router.push("/search?saved=true");
+                    } catch (error) {
+                      console.error("Local save failed:", error);
+                      router.push("/search?saved=true");
+                    }
+                  }}
+                  className="w-full h-[56px] bg-[#111111] text-white rounded-2xl text-[16px] font-bold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg"
+                >
+                  찜한 장소로 등록하기
+                </button>
+              )}
             </div>
           </div>
         </div>
