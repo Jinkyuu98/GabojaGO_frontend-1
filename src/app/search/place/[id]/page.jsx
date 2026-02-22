@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
+import Script from "next/script";
 import { MobileContainer } from "../../../../components/layout/MobileContainer";
 
 /**
@@ -14,6 +15,8 @@ export default function SearchPlaceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { id } = params;
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
 
   const [placeData, setPlaceData] = useState({
     name: "장소 정보",
@@ -21,10 +24,12 @@ export default function SearchPlaceDetailPage() {
     address: "주소를 불러오는 중입니다",
     rating: 0,
     reviewCount: 0,
+    latitude: 37.5665,
+    longitude: 126.978,
   });
 
   // [ADD] 로컬 스토리지에서 실제 데이터 불러오기
-  React.useEffect(() => {
+  useEffect(() => {
     const savedData = localStorage.getItem(`place_${id}`);
     if (savedData) {
       try {
@@ -35,8 +40,68 @@ export default function SearchPlaceDetailPage() {
     }
   }, [id]);
 
+  // [ADD] 지도 초기화 및 마커 표시
+  const initMap = () => {
+    if (!window.kakao || !mapRef.current) return;
+
+    window.kakao.maps.load(() => {
+      const position = new window.kakao.maps.LatLng(
+        placeData.latitude,
+        placeData.longitude,
+      );
+
+      // 지도 생성
+      if (!mapInstance.current) {
+        mapInstance.current = new window.kakao.maps.Map(mapRef.current, {
+          center: position,
+          level: 3,
+        });
+      } else {
+        mapInstance.current.setCenter(position);
+      }
+
+      const map = mapInstance.current;
+
+      // [MOD] 바텀시트 높이를 고려하여 지도를 아래로 이동시켜 마커를 위로 올림
+      map.panBy(0, 150);
+
+      // 마커 표시
+      const marker = new window.kakao.maps.Marker({
+        position: position,
+      });
+      marker.setMap(map);
+
+      // 커스텀 오버레이 (장소명)
+      const content = `
+        <div class="mt-10 bg-black/80 backdrop-blur-md px-2 py-0 rounded-[6px] border border-white/20 shadow-lg">
+          <span class="text-white text-[13px] font-medium whitespace-nowrap">
+            ${placeData.name}
+          </span>
+        </div>
+      `;
+
+      const customOverlay = new window.kakao.maps.CustomOverlay({
+        position: position,
+        content: content,
+        yAnchor: 0.5,
+      });
+      customOverlay.setMap(map);
+    });
+  };
+
+  useEffect(() => {
+    if (window.kakao) {
+      initMap();
+    }
+  }, [placeData]);
+
   return (
     <MobileContainer>
+      <Script
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=57dd33d25e0269c9c37a3ea70b3a3b4f&autoload=false&libraries=services"
+        strategy="afterInteractive"
+        onLoad={initMap}
+      />
       <div className="relative w-full h-screen bg-white overflow-hidden">
         {/* [ADD] 상단 헤더 섹션: 뒤로가기 버튼 및 장소명 */}
         <div className="fixed top-0 left-0 right-0 px-6 pt-4 pb-4 flex items-center bg-white z-30 shadow-sm">
@@ -57,33 +122,9 @@ export default function SearchPlaceDetailPage() {
           </h1>
         </div>
 
-        {/* [ADD] 지도 영역 (백그라운드) */}
+        {/* [MOD] 지도 영역 (실제 카카오맵 연결) */}
         <div className="absolute inset-0 w-full h-full z-10 pt-[60px]">
-          <Image
-            src="/images/map-background.png"
-            alt="map background"
-            fill
-            className="object-cover"
-            priority
-          />
-
-          {/* [ADD] 지도 위 장소 마커 */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-            <div className="relative w-10 h-10 bg-[#7a28fa] rounded-full border-2 border-white shadow-lg flex items-center justify-center animate-bounce">
-              <Image
-                src="/icons/location.svg"
-                alt="marker"
-                width={16}
-                height={16}
-                className="brightness-0 invert"
-              />
-            </div>
-            <div className="mt-2 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20">
-              <span className="text-white text-[12px] font-bold whitespace-nowrap">
-                {placeData.name}
-              </span>
-            </div>
-          </div>
+          <div ref={mapRef} className="w-full h-full" />
         </div>
 
         {/* [ADD] 하단 바텀시트 섹션 */}

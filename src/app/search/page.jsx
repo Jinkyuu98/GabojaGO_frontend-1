@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import Script from "next/script";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
@@ -28,6 +29,10 @@ const HighlightText = ({ text, keyword }) => {
 };
 
 export default function SearchPage() {
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+  const markersRef = useRef([]);
+  const overlayRef = useRef(null); // [ADD] 커스텀 오버레이 추적을 위해 추가
   const router = useRouter();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +76,79 @@ export default function SearchPage() {
     }));
   };
 
+  // 지도 초기 생성
+  useEffect(() => {
+    if (!window.kakao || !mapRef.current) return;
+
+    window.kakao.maps.load(() => {
+      const center = new window.kakao.maps.LatLng(37.5665, 126.978);
+
+      mapInstance.current = new window.kakao.maps.Map(mapRef.current, {
+        center,
+        level: 4,
+      });
+    });
+  }, []);
+
+  // 검색 결과, 선택 장소 마커 표시
+  useEffect(() => {
+    if (!mapInstance.current) return;
+
+    const map = mapInstance.current;
+
+    // 기존 마커 제거
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+
+    const targets = selectedPlace ? [selectedPlace] : searchResults;
+
+    targets.forEach((place) => {
+      if (!place.latitude || !place.longitude) return;
+
+      const position = new window.kakao.maps.LatLng(
+        place.latitude,
+        place.longitude,
+      );
+
+      const marker = new window.kakao.maps.Marker({ position });
+      marker.setMap(map);
+
+      markersRef.current.push(marker);
+    });
+
+    // [ADD] 선택된 장소가 있으면 지리적 좌표에 고정된 CustomOverlay 생성
+    if (overlayRef.current) {
+      overlayRef.current.setMap(null);
+    }
+
+    if (selectedPlace) {
+      const position = new window.kakao.maps.LatLng(
+        selectedPlace.latitude,
+        selectedPlace.longitude,
+      );
+      // 장소명 마커
+      const content = `
+        <div class="mt-10 bg-black/80 backdrop-blur-md px-2 py-0 rounded-[6px] border border-white/20 shadow-lg">
+          <span class="text-white text-[13px] font-medium whitespace-nowrap">
+            ${selectedPlace.name}
+          </span>
+        </div>
+      `;
+
+      const customOverlay = new window.kakao.maps.CustomOverlay({
+        position: position,
+        content: content,
+        yAnchor: 0.5,
+      });
+
+      customOverlay.setMap(map);
+      overlayRef.current = customOverlay;
+
+      // 선택 장소 있으면 중심 이동
+      map.setCenter(position);
+    }
+  }, [searchResults, selectedPlace]);
+
   // [ADD] 검색 API 호출 로직 (PC용 디바운스)
   useEffect(() => {
     const fetchResults = async () => {
@@ -101,12 +179,19 @@ export default function SearchPage() {
 
   return (
     <MobileContainer showNav={true} className="!max-w-none">
+      <Script
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=57dd33d25e0269c9c37a3ea70b3a3b4f&autoload=false&libraries=services"
+        strategy="beforeInteractive"
+      />
       <div className="relative w-full h-screen bg-white overflow-hidden lg:flex lg:flex-row">
         {/* [MOD] Left Sidebar Content Area (Search & Categories) with Toggle Logic */}
         <div
           className={clsx(
             "hidden lg:flex flex-col h-full bg-white border-r border-[#f2f4f6] z-20 transition-all duration-300 ease-in-out relative",
-            isSidePanelOpen ? "w-[400px]" : "w-0 border-none",
+            // [MOD] 보조 상세 패널이 열리면 메인 패널의 그림자를 제거하여 시각적 중첩 방지
+            isSidePanelOpen
+              ? clsx("w-[400px]", !isSecondaryPanelOpen && "lg:shadow-2xl")
+              : "w-0 border-none",
           )}
         >
           <div
@@ -317,7 +402,22 @@ export default function SearchPage() {
 
           {/* [ADD] Side Panel Toggle Button */}
           <button
-            onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
+            onClick={() => {
+              setIsSidePanelOpen(!isSidePanelOpen);
+              // [MOD] 패널 크기 변경 시 지도 레이아웃 갱신
+              setTimeout(() => {
+                if (mapInstance.current) {
+                  mapInstance.current.relayout();
+                  if (selectedPlace) {
+                    const moveLatLon = new window.kakao.maps.LatLng(
+                      selectedPlace.latitude,
+                      selectedPlace.longitude,
+                    );
+                    mapInstance.current.setCenter(moveLatLon);
+                  }
+                }
+              }, 300);
+            }}
             className={clsx(
               "absolute top-1/2 -translate-y-1/2 -right-4 w-8 h-12 bg-white border border-[#f2f4f6] rounded-r-xl shadow-md z-30 flex items-center justify-center hover:bg-gray-50 transition-all",
               !isSidePanelOpen && "!-right-10 rounded-xl",
@@ -340,8 +440,9 @@ export default function SearchPage() {
         <div
           className={clsx(
             "hidden lg:flex flex-col h-full bg-white border-r border-[#f2f4f6] z-10 transition-all duration-300 ease-in-out relative",
+            // [MOD] 보조 상세 패널에도 일관된 그림자 효과 적용
             isSecondaryPanelOpen && selectedPlace
-              ? "w-[400px]"
+              ? "w-[400px] lg:shadow-2xl"
               : "w-0 border-none overflow-hidden",
           )}
         >
@@ -384,12 +485,8 @@ export default function SearchPage() {
             <div className="flex-1 overflow-y-auto scrollbar-hide">
               {/* Place Hero Image */}
               <div className="relative w-full h-[300px] bg-gray-100">
-                <Image
-                  src="/images/map-background.png" // Temporary placeholder
-                  alt="place photo"
-                  fill
-                  className="object-cover object-center"
-                />
+                {/* Kakao Map */}
+                <div ref={mapRef} className="absolute inset-0 w-full h-full" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-8 left-6 right-6">
                   <h1 className="text-[26px] font-bold text-white mb-2 tracking-[-1px]">
@@ -478,33 +575,10 @@ export default function SearchPage() {
         <div className="relative flex-1 h-full overflow-hidden">
           {/* Map Background */}
           <div className="absolute inset-0 w-full h-full">
-            <Image
-              src="/images/map-background.png"
-              alt="map"
-              fill
-              className="object-cover"
-              priority
-            />
+            {/* Kakao Map */}
+            <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
-            {/* [ADD] PC Inline Selected Place Marker */}
-            {selectedPlace && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-30">
-                <div className="relative w-12 h-12 bg-[#7a28fa] rounded-full border-2 border-white shadow-xl flex items-center justify-center animate-bounce">
-                  <Image
-                    src="/icons/location.svg"
-                    alt="marker"
-                    width={20}
-                    height={20}
-                    className="brightness-0 invert"
-                  />
-                </div>
-                <div className="mt-3 bg-black/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 shadow-lg">
-                  <span className="text-white text-[14px] font-bold whitespace-nowrap">
-                    {selectedPlace.name}
-                  </span>
-                </div>
-              </div>
-            )}
+            {/* [MOD] CustomOverlay로 대체됨 */}
           </div>
 
           {/* Mobile-only Search Bar Overlay */}
