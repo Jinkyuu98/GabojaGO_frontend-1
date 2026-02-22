@@ -30,7 +30,9 @@ const HighlightText = ({ text, keyword }) => {
 
 export default function SearchClient() {
   const mapRef = useRef(null);
+  const detailMapRef = useRef(null); // [ADD] 상세 패널용 전용 지도 레퍼런스 추가
   const mapInstance = useRef(null);
+  const detailMapInstance = useRef(null); // [ADD] 상세 패널용 지도 인스턴스 추가
   const markersRef = useRef([]);
   const overlayRef = useRef(null);
   const router = useRouter();
@@ -135,6 +137,45 @@ export default function SearchClient() {
       map.setCenter(position);
     }
   }, [searchResults, selectedPlace]);
+
+  // [ADD] 상세 패널이 열릴 때 전용 지도를 초기화하거나 위치를 맞춤
+  useEffect(() => {
+    if (
+      !isSecondaryPanelOpen ||
+      !selectedPlace ||
+      !window.kakao ||
+      !detailMapRef.current
+    ) {
+      if (detailMapInstance.current) {
+        detailMapInstance.current = null;
+      }
+      return;
+    }
+
+    window.kakao.maps.load(() => {
+      const position = new window.kakao.maps.LatLng(
+        selectedPlace.latitude,
+        selectedPlace.longitude,
+      );
+
+      if (!detailMapInstance.current) {
+        detailMapInstance.current = new window.kakao.maps.Map(
+          detailMapRef.current,
+          {
+            center: position,
+            level: 3,
+          },
+        );
+
+        // 상세 패널 마커
+        const marker = new window.kakao.maps.Marker({ position });
+        marker.setMap(detailMapInstance.current);
+      } else {
+        detailMapInstance.current.setCenter(position);
+        detailMapInstance.current.relayout();
+      }
+    });
+  }, [isSecondaryPanelOpen, selectedPlace]);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -455,7 +496,11 @@ export default function SearchClient() {
 
             <div className="flex-1 overflow-y-auto scrollbar-hide">
               <div className="relative w-full h-[300px] bg-gray-100">
-                <div ref={mapRef} className="absolute inset-0 w-full h-full" />
+                {/* [MOD] 전용 레퍼런스 detailMapRef 사용 */}
+                <div
+                  ref={detailMapRef}
+                  className="absolute inset-0 w-full h-full"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-8 left-6 right-6">
                   <h1 className="text-[26px] font-bold text-white mb-2 tracking-[-1px]">
