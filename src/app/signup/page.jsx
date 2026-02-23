@@ -155,12 +155,12 @@ export default function SignupPage() {
     }
 
     try {
-      // ✅ FastAPI 호출
+      // [MOD] FastAPI 호출 파라미터 변동에 따른 수정 (strUserID, strUserPW, strName, strEmail)
       await signup({
-        id,
-        pw: password,
-        name,
-        email, // [ADD] 이메일 필드 추가
+        strUserID: id,
+        strUserPW: password,
+        strName: name,
+        strEmail: email, // [ADD] 이메일 필드 추가
       });
 
       // ✅ 전역 상태 저장 (선택)

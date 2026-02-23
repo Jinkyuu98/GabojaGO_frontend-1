@@ -12,9 +12,12 @@ export const signup = async (data) => {
   return res.data;
 };
 
-// [MOD] api 인스턴스 사용 및 데이터 형식({id, pw}) 유지
+// [MOD] api 인스턴스 사용 및 데이터 형식({strUserID, strUserPW}) 으로 변경
 export const login = async (id, password) => {
-  const res = await api.post("/auth/login", { id: id, pw: password });
+  const res = await api.post("/auth/login", {
+    strUserID: id,
+    strUserPW: password,
+  });
 
   if (res.data?.access_token) {
     localStorage.setItem("token", res.data.access_token);

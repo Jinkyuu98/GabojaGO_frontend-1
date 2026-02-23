@@ -27,3 +27,11 @@ export const registerPlace = (placeData) =>
  * @returns {Promise}
  */
 export const getSavedPlaces = () => api.get("/location/register");
+
+/**
+ * 장소 등록 취소(찜 해제) API
+ * @param {Object} placeData - 취소할 장소 데이터 (iPK 등)
+ * @returns {Promise}
+ */
+export const unregisterPlace = (placeData) =>
+  api.post("/location/unregister", placeData);

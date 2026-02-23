@@ -28,11 +28,41 @@ export default function SearchInputPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("전체"); // [ADD] 드롭다운 카테고리 상태
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef(null);
 
+  // [ADD] 카테고리 목록 정의
+  const categories = [
+    "전체",
+    "음식점",
+    "카페",
+    "편의점",
+    "대형마트",
+    "관광명소",
+    "숙박",
+    "문화시설",
+    "지하철역",
+    "주차장",
+    "주유소",
+    "기타",
+  ];
+
+  const CATEGORY_MAP = {
+    음식점: "FD6",
+    카페: "CE7",
+    편의점: "CS2",
+    대형마트: "MT1",
+    관광명소: "AT4",
+    숙박: "AD5",
+    문화시설: "CT1",
+    지하철역: "SW8",
+    주차장: "PK6",
+    주유소: "OL7",
+  };
+
   // [ADD] 서버 데이터(LocationModel Map)를 프론트엔드용 배열로 변환
-  const transformServerData = (data) => {
+  const transformServerData = (data, keyword) => {
     if (!data) return [];
     // FastAPI 응답은 키가 인덱스인 객체 맵 형식일 수 있으므로 배열로 변환
     const items =
@@ -40,18 +70,32 @@ export default function SearchInputPage() {
         ? Object.values(data)
         : data;
 
-    return items.map((item) => ({
-      id: item.id, // Kakao Place ID
-      name: item.name,
-      address: item.address,
-      category: item.group_name || item.category || "장소",
-      rating: 0,
-      reviewCount: 0,
-      longitude: parseFloat(item.longitude),
-      latitude: parseFloat(item.latitude),
-      link: item.link,
-      phone: item.phone,
-    }));
+    // [MOD] 실제 백엔드 API 응답 필드명(strName, strAddress 등)에 맞게 변환 및 카테고리 필터 적용
+    return items
+      .filter((item) => {
+        // 카테고리 필터 적용 (strGroupCode 기반)
+        if (selectedCategory === "전체") return true;
+
+        const code = item.strGroupCode;
+        if (selectedCategory === "기타") {
+          return !Object.values(CATEGORY_MAP).includes(code);
+        }
+        return code === CATEGORY_MAP[selectedCategory];
+      })
+      .slice(0, 15) // [MOD] 결과 항목을 15개로 제한
+      .map((item) => ({
+        id: item.iPK, // Kakao Place ID
+        name: item.strName,
+        address: item.strAddress,
+        category: item.strGroupName || "기타",
+        groupCode: item.strGroupCode || "기타",
+        rating: 0,
+        reviewCount: 0,
+        longitude: parseFloat(item.ptLongitude),
+        latitude: parseFloat(item.ptLatitude),
+        link: item.strLink,
+        phone: item.strPhone,
+      }));
   };
 
   // [ADD] 검색 API 호출 로직 (디바운스 적용)
@@ -65,7 +109,7 @@ export default function SearchInputPage() {
       setIsLoading(true);
       try {
         const response = await searchPlaces(searchQuery);
-        const transformedData = transformServerData(response.data);
+        const transformedData = transformServerData(response.data, searchQuery);
         setSearchResults(transformedData);
       } catch (error) {
         console.error("Place search failed:", error);
@@ -80,7 +124,7 @@ export default function SearchInputPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory]); // [MOD] 카테고리 변경 시에도 검색 재실행
 
   useEffect(() => {
     if (inputRef.current) {
@@ -110,7 +154,40 @@ export default function SearchInputPage() {
         </div>
 
         {/* Search Input Section */}
-        <div className="px-5 py-4 mt-[60px]">
+        <div className="px-5 py-4 mt-[60px] flex flex-col gap-3">
+          {/* [ADD] Category Dropdown Filter */}
+          <div className="relative w-full">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full h-12 bg-white border border-[#f2f4f6] text-[#111111] text-[15px] font-medium rounded-xl px-4 appearance-none outline-none focus:border-[#7a28fa] focus:ring-1 focus:ring-[#7a28fa]/20 transition-all cursor-pointer shadow-sm"
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M2.5 4.5L6 8L9.5 4.5"
+                  stroke="#7e7e7e"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Search Input */}
           <div className="flex items-center gap-3 bg-[#f5f7f9] h-14 px-4 rounded-xl border border-[#f2f4f6] transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-[#7a28fa]/20 focus-within:border-[#7a28fa]">
             <Image
               src="/icons/search.svg"
@@ -181,18 +258,7 @@ export default function SearchInputPage() {
             <div className="flex flex-col items-center justify-center pt-20 text-[#abb1b9]">
               <p className="text-[15px] font-medium">검색 결과가 없습니다.</p>
             </div>
-          ) : (
-            <div className="flex flex-col gap-6 pt-4">
-              <h2 className="text-[15px] font-bold text-[#111111]">
-                최근 검색어
-              </h2>
-              <div className="flex flex-col gap-4">
-                <p className="text-[14px] text-[#abb1b9]">
-                  최근 검색어가 없습니다.
-                </p>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </MobileContainer>

@@ -10,7 +10,8 @@ import { BottomNavigation } from "../../components/layout/BottomNavigation";
 import { Toast } from "../../components/common/Toast";
 import { searchPlaces, registerPlace } from "../../services/place";
 
-const HighlightText = ({ text, keyword }) => {
+const HighlightText = ({ text = "", keyword = "" }) => {
+  if (!text) return null;
   if (!keyword.trim()) return <span>{text}</span>;
   const parts = text.split(new RegExp(`(${keyword})`, "gi"));
   return (
@@ -78,18 +79,23 @@ export default function SearchClient() {
         : data;
 
     return items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      address: item.address,
-      category: item.group_name || item.category || "장소",
-      rating: 0,
-      reviewCount: 0,
-      longitude: parseFloat(item.longitude),
-      latitude: parseFloat(item.latitude),
-      link: item.link,
-      phone: item.phone,
+      id: item.iPK || item.id,
+      name: item.strName || item.name || "",
+      address: item.strAddress || item.address || "",
+      category: item.strGroupName || item.category || "기타",
+      groupCode: item.strGroupCode || item.group_code || "기타",
+      rating: item.rating || 0,
+      reviewCount: item.reviewCount || 0,
+      longitude: parseFloat(item.ptLongitude || item.longitude || 0),
+      latitude: parseFloat(item.ptLatitude || item.latitude || 0),
+      link: item.strLink || item.link || "",
+      phone: item.strPhone || item.phone || "",
       image:
-        item.first_image || item.image_url || item.image || item.thumbnail_url,
+        item.first_image ||
+        item.image_url ||
+        item.image ||
+        item.thumbnail_url ||
+        "",
     }));
   };
 
@@ -287,6 +293,7 @@ export default function SearchClient() {
                               name: selectedPlace.name,
                               address: selectedPlace.address,
                               category: selectedPlace.category,
+                              groupCode: selectedPlace.groupCode,
                               latitude: selectedPlace.latitude,
                               longitude: selectedPlace.longitude,
                               phone: selectedPlace.phone,
@@ -400,7 +407,7 @@ export default function SearchClient() {
                   />
                   <input
                     type="text"
-                    placeholder="장소, 숙소, 버스 검색"
+                    placeholder="장소, 숙소, 지하철 역 검색"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1 bg-transparent text-[16px] font-medium text-[#111111] placeholder:text-[#abb1b9] outline-none"
@@ -552,7 +559,7 @@ export default function SearchClient() {
 
           <div className="lg:hidden absolute top-0 left-0 right-0 px-5 pt-6 pb-4 z-20">
             <div
-              className="flex items-center gap-3 bg-white h-14 px-4 rounded-xl shadow-lg border border-[#f2f4f6] cursor-pointer"
+              className="flex items-center gap-3 bg-white h-14 px-4 rounded-xl border border-[#111111] cursor-pointer shadow-md"
               onClick={() => router.push("/search/input")}
             >
               <Image
@@ -560,18 +567,18 @@ export default function SearchClient() {
                 alt="search"
                 width={20}
                 height={20}
-                className="opacity-50"
+                className="opacity-100"
               />
               <div className="flex-1 text-[16px] font-medium text-[#abb1b9]">
-                장소, 숙소, 버스 검색
+                장소, 숙소, 지하철 역 검색
               </div>
             </div>
 
-            <div className="mt-3 flex overflow-x-auto gap-2 scrollbar-hide pb-2 px-5 -mx-5 text-black">
+            <div className="mt-3 flex overflow-x-auto gap-1 scrollbar-hide pb-2 px-5 -mx-5 text-black">
               {["음식점", "카페", "편의점", "숙소", "버스"].map((category) => (
                 <button
                   key={category}
-                  className="whitespace-nowrap px-4 py-2 bg-white rounded-full text-[14px] font-semibold text-[#111111] shadow-md border border-[#f2f4f6] hover:bg-gray-50 active:scale-95 transition-all"
+                  className="whitespace-nowrap px-3 py-1.5 bg-white rounded-full text-[14px] font-medium text-[#111111] transition-all shadow-md"
                 >
                   {category}
                 </button>

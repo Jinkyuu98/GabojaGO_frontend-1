@@ -2,8 +2,8 @@
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import Image from "next/image";
 import { clsx } from "clsx";
+import { Home, Calendar, MapPin, User } from "lucide-react";
 
 export const SideNavigation = () => {
   const router = useRouter();
@@ -13,30 +13,26 @@ export const SideNavigation = () => {
     {
       label: "홈",
       path: "/home",
-      icon: "/icons/home-active.svg",
+      icon: Home,
       width: 24,
-      height: 24,
     },
     {
       label: "일정",
       path: "/trips",
-      icon: "/icons/calendar.svg",
+      icon: Calendar,
       width: 24,
-      height: 24,
     },
     {
       label: "장소 검색",
       path: "/search",
-      icon: "/icons/location.svg",
-      width: 26,
-      height: 26,
+      icon: MapPin,
+      width: 24,
     },
     {
       label: "마이페이지",
       path: "/profile",
-      icon: "/icons/user.svg",
-      width: 20,
-      height: 20,
+      icon: User,
+      width: 24,
     },
   ];
 
@@ -45,6 +41,7 @@ export const SideNavigation = () => {
       <nav className="flex flex-col gap-6">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path;
+          const Icon = item.icon;
 
           return (
             <button
@@ -53,19 +50,17 @@ export const SideNavigation = () => {
                 "flex flex-col items-center justify-center gap-2 px-1 py-4 rounded-2xl transition-all w-full",
                 isActive
                   ? "bg-[#f8f6ff] text-[#7a28fa]"
-                  : "bg-transparent text-[#556574] hover:bg-[#f5f7f9]",
+                  : "bg-transparent text-[#abb1b9] hover:bg-[#f5f7f9] hover:text-[#556574]",
               )}
               onClick={() => router.push(item.path)}
             >
-              <Image
-                src={item.icon}
-                alt={item.label}
-                width={24}
-                height={24}
-                className={clsx("transition-all", {
-                  "grayscale-0 opacity-100": isActive,
-                  "grayscale opacity-40": !isActive,
-                })}
+              <Icon
+                size={item.width}
+                fill={isActive ? "currentColor" : "#abb1b9"}
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors"
               />
               <span className="text-[12px] font-bold tracking-[-0.4px] text-center whitespace-nowrap">
                 {item.label}
