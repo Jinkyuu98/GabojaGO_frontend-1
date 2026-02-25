@@ -1,29 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MobileContainer } from "../../components/layout/MobileContainer";
 import { BottomNavigation } from "../../components/layout/BottomNavigation";
+import { ActionSheet } from "../../components/common/ActionSheet";
 import { useOnboardingStore } from "../../store/useOnboardingStore";
 import { Search } from "lucide-react";
 import { clsx } from "clsx";
+import { getScheduleList } from "../../services/schedule";
 
 const TripCard = ({ trip, onClick, isLast }) => {
-  const companionText = trip.companion
-    ? ["친구와", "연인과", "가족과", "부모님과"].includes(trip.companion)
-      ? `${trip.companion} 함께`
-      : trip.companion
+  const companionText = trip.strWithWho
+    ? ["친구와", "연인과", "가족과", "부모님과", "친구", "연인", "가족", "부모님"].includes(trip.strWithWho)
+      ? `${trip.strWithWho} 함께`
+      : trip.strWithWho
     : "나홀로";
 
   const dateText = (() => {
-    if (!trip.startDate) return "날짜 없음";
+    if (!trip.dtDate1) return "날짜 없음";
     const formatDate = (dateStr) => {
       if (!dateStr) return "";
       return dateStr.split("T")[0].replace(/-/g, ".");
     };
-    const start = formatDate(trip.startDate);
-    if (!trip.endDate) return start;
-    const end = formatDate(trip.endDate);
+    const start = formatDate(trip.dtDate1);
+    if (!trip.dtDate2) return start;
+    const end = formatDate(trip.dtDate2);
     const startYear = start.split(".")[0];
     const endYear = end.split(".")[0];
     if (startYear === endYear) {
@@ -33,7 +35,9 @@ const TripCard = ({ trip, onClick, isLast }) => {
     }
   })();
 
-  const tags = trip.tags || ["자연", "맛집", "카페", "쇼핑"];
+  const tags = trip.strTripStyle
+    ? trip.strTripStyle.split(",").map(t => t.trim()).filter(Boolean)
+    : trip.tags || ["자연", "맛집", "카페", "쇼핑"];
 
   return (
     <>
@@ -52,7 +56,7 @@ const TripCard = ({ trip, onClick, isLast }) => {
           </div>
 
           <h2 className="text-[18px] lg:text-[16px] font-bold text-[#111111] tracking-[-0.5px] leading-tight mb-auto lg:mb-0 lg:flex-1 truncate">
-            {trip.title}
+            {trip.strWhere}
           </h2>
 
           <div className="flex flex-wrap gap-1.5 mt-1 lg:mt-0 lg:ml-2 shrink-0">
@@ -89,28 +93,49 @@ const TripCard = ({ trip, onClick, isLast }) => {
 
 export default function TripsListPage() {
   const router = useRouter();
-  const { myTrips, resetTravelData } = useOnboardingStore();
+  const { setTravelData, resetTravelData } = useOnboardingStore();
   const [activeTab, setActiveTab] = useState("itinerary"); // 'itinerary' | 'records'
+  const [scheduleList, setScheduleList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        setIsLoading(true);
+        // '예정(a)', '진행(b)', '완료(c)' 목록을 병렬로 조회
+        const [resA, resB, resC] = await Promise.all([
+          getScheduleList("A"),
+          getScheduleList("B"),
+          getScheduleList("C")
+        ]);
+
+        const allTrips = [
+          ...(resA?.schedule_list || []),
+          ...(resB?.schedule_list || []),
+          ...(resC?.schedule_list || [])
+        ];
+
+        setScheduleList(allTrips);
+      } catch (err) {
+        console.error("일정 목록 전체 조회 실패:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSchedules();
+  }, []);
 
   const handleCreateNew = () => {
-    resetTravelData();
-    router.push("/onboarding/location");
+    setIsActionSheetOpen(true);
   };
 
-  const now = new Date();
-
-  const itineraryTrips = myTrips
-    .filter((trip) => {
-      if (!trip.endDate) return true;
-      return new Date(trip.endDate) >= now;
-    })
+  const itineraryTrips = scheduleList
+    .filter((trip) => trip.chStatus?.toUpperCase() === "A" || trip.chStatus?.toUpperCase() === "B")
     .reverse();
 
-  const recordTrips = myTrips
-    .filter((trip) => {
-      if (!trip.endDate) return false;
-      return new Date(trip.endDate) < now;
-    })
+  const recordTrips = scheduleList
+    .filter((trip) => trip.chStatus?.toUpperCase() === "C")
     .reverse();
 
   const displayTrips = activeTab === "itinerary" ? itineraryTrips : recordTrips;
@@ -166,17 +191,21 @@ export default function TripsListPage() {
             </div>
 
             <div className="bg-[#fafafa] lg:bg-white px-5 py-5 lg:py-8 lg:rounded-b-2xl lg:px-8 min-h-[700px] lg:border lg:border-[#eceff4]">
-              {displayTrips.length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center p-20 text-[#898989] text-[15px]">
+                  여행 일정을 불러오는 중입니다...
+                </div>
+              ) : displayTrips.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1 gap-3 lg:gap-4">
                   {displayTrips.map((trip, index) => (
                     <div
-                      key={trip.id}
+                      key={trip.iPK}
                       className="bg-white rounded-2xl border border-[#eceff4] hover:border-[#7a28fa] transition-all cursor-pointer"
                     >
                       <TripCard
                         trip={trip}
                         isLast={index === displayTrips.length - 1 || true}
-                        onClick={() => router.push(`/trips/${trip.id}`)}
+                        onClick={() => router.push(`/trips/${trip.iPK}`)}
                       />
                     </div>
                   ))}
@@ -185,15 +214,15 @@ export default function TripsListPage() {
                 <div className="bg-white rounded-3xl py-16 px-5 text-center mt-5 mx-5">
                   <p className="text-[15px] text-[#8e8e93] leading-relaxed mb-6 whitespace-pre-wrap">
                     {activeTab === "itinerary"
-                      ? "예정된 여정이 없습니다.\n새로운 여행을 계획해보세요!"
+                      ? "아직 여행 일정이 없어요\n첫 여행 일정을 만들어볼까요?"
                       : "완료된 여행 기록이 없습니다."}
                   </p>
                   {activeTab === "itinerary" && (
                     <button
-                      className="bg-[#111] text-white border-none py-3.5 px-6 rounded-2xl font-bold text-[15px] cursor-pointer hover:opacity-90 active:opacity-80 transition-opacity"
+                      className="bg-[#111] text-white border-none py-3 px-6 rounded-full font-semibold text-[16px] cursor-pointer hover:opacity-90 active:opacity-80 transition-opacity"
                       onClick={handleCreateNew}
                     >
-                      AI 일정 생성하기
+                      일정 생성하기
                     </button>
                   )}
                 </div>
@@ -201,6 +230,30 @@ export default function TripsListPage() {
             </div>
           </div>
         </div>
+
+        <ActionSheet
+          isOpen={isActionSheetOpen}
+          onClose={() => setIsActionSheetOpen(false)}
+          title="어떤 방식으로 생성할까요?"
+          options={[
+            {
+              label: "AI 일정 생성",
+              onClick: () => {
+                resetTravelData(); // [ADD] 기존 입력 데이터 초기화
+                setTravelData({ creationType: "ai" });
+                router.push("/onboarding/location");
+              },
+            },
+            {
+              label: "직접 일정 생성",
+              onClick: () => {
+                resetTravelData(); // [ADD] 기존 입력 데이터 초기화
+                setTravelData({ creationType: "manual" });
+                router.push("/onboarding/location");
+              },
+            },
+          ]}
+        />
 
         <BottomNavigation />
       </div>

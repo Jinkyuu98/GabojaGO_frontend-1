@@ -132,11 +132,135 @@ export default function TripDetailPage() {
     ],
   };
 
+  const [apiTrip, setApiTrip] = useState(null);
+
+  useEffect(() => {
+    const fetchTrip = async () => {
+      try {
+        const { getScheduleList, getScheduleLocations, getScheduleExpenses, getScheduleUsers } = await import("../../../services/schedule");
+
+        // 1) 기본 정보와 3가지 상세 정보를 병렬로 호출합니다.
+        const [resA, resB, resC, locationRes, expenseRes, userRes] = await Promise.all([
+          getScheduleList("a"),
+          getScheduleList("b"),
+          getScheduleList("c"),
+          getScheduleLocations(tripId).catch(() => null),
+          getScheduleExpenses(tripId).catch(() => null),
+          getScheduleUsers(tripId).catch(() => null)
+        ]);
+
+        const allTrips = [
+          ...(resA?.schedule_list || []),
+          ...(resB?.schedule_list || []),
+          ...(resC?.schedule_list || [])
+        ];
+        const found = allTrips.find(t => String(t.iPK) === String(tripId));
+
+        if (found) {
+          // 일차 수 계산
+          const startDate = new Date(found.dtDate1 || found.startDate);
+          const endDate = new Date(found.dtDate2 || found.endDate);
+          const startUtc = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+          const endUtc = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          const diffDays = Math.floor((endUtc - startUtc) / (1000 * 3600 * 24)) + 1;
+          const dayCount = (diffDays > 0 && !isNaN(diffDays)) ? diffDays : 1;
+
+          // 장소 (location_list -> days)
+          const newDays = Array.from({ length: dayCount }, () => ({ places: [], records: [] }));
+          if (locationRes?.location_list) {
+            const list = Array.isArray(locationRes.location_list) ? locationRes.location_list :
+              (typeof locationRes.location_list === "string" ? JSON.parse(locationRes.location_list.replace(/'/g, '"')) : []);
+
+            list.forEach(locItem => {
+              if (!locItem.dtSchedule || !locItem.location) return;
+              const locDate = new Date(locItem.dtSchedule.split(" ")[0].replace(/-/g, "/")); // Safari 호환
+              const locUtc = Date.UTC(locDate.getFullYear(), locDate.getMonth(), locDate.getDate());
+              let dayIdx = Math.floor((locUtc - startUtc) / (1000 * 3600 * 24));
+              if (dayIdx < 0) dayIdx = 0;
+              if (dayIdx >= dayCount) dayIdx = dayCount - 1;
+              if (isNaN(dayIdx)) dayIdx = 0;
+
+              const timeParts = locItem.dtSchedule.split(" ");
+              const timeStr = timeParts.length > 1 ? timeParts[1].substring(0, 5) : "10:00";
+
+              newDays[dayIdx].places.push({
+                name: locItem.location.strName,
+                time: timeStr,
+                duration: "1시간"
+              });
+            });
+          }
+
+          // 비용 (expense_list -> budget.spent)
+          let newSpent = [];
+          if (expenseRes?.expense_list) {
+            try {
+              const eList = typeof expenseRes.expense_list === "string"
+                ? JSON.parse(expenseRes.expense_list.replace(/'/g, '"'))
+                : (Array.isArray(expenseRes.expense_list) ? expenseRes.expense_list : []);
+
+              const categoryColors = { "숙박비": "#14b8a6", "식비": "#3b82f6", "교통비": "#ffa918", "기타": "#b115fa", "쇼핑": "#f43f5e", "관광": "#8b5cf6" };
+              const totalB = found.nTotalBudget || 500000;
+
+              newSpent = eList.map(exp => ({
+                category: exp.chCategory || "기타",
+                amount: exp.nMoney || 0,
+                color: categoryColors[exp.chCategory] || "#b115fa",
+                percentage: Math.round(((exp.nMoney || 0) / totalB) * 100)
+              }));
+            } catch (e) { console.error("Expense parse error", e); }
+          }
+
+          // 동행자 (user_list -> companions)
+          let newCompanions = [];
+          if (userRes?.user_list) {
+            try {
+              const uList = typeof userRes.user_list === "string"
+                ? JSON.parse(userRes.user_list.replace(/'/g, '"'))
+                : (Array.isArray(userRes.user_list) ? userRes.user_list : []);
+
+              newCompanions = uList.map((usr, i) => ({
+                id: usr.iUserFK,
+                name: `유저 ${usr.iUserFK}`,
+                isOwner: i === 0
+              }));
+            } catch (e) { console.error("User parse error", e); }
+          }
+
+          setApiTrip({
+            id: found.iPK,
+            title: found.strWhere ? `${found.strWhere} 여행` : "여행 일정",
+            startDate: found.dtDate1,
+            endDate: found.dtDate2,
+            dtDate1: found.dtDate1,
+            dtDate2: found.dtDate2,
+            companion: found.strWithWho,
+            totalBudget: found.nTotalBudget,
+            travelStyle: found.strTripStyle,
+            // 매핑한 상세 정보 연동
+            days: newDays.length > 0 ? newDays : MOCK_TRIP.days,
+            budget: {
+              total: found.nTotalBudget || 500000,
+              spent: newSpent.length > 0 ? newSpent : MOCK_TRIP.budget.spent,
+              planned: MOCK_TRIP.budget.planned,
+            },
+            companions: newCompanions.length > 0 ? newCompanions : MOCK_TRIP.companions,
+            checklist: MOCK_TRIP.checklist,
+          });
+        }
+      } catch (err) {
+        console.error("일정 상세 조회 실패:", err);
+      }
+    };
+    fetchTrip();
+  }, [tripId]);
+
   const trip = useMemo(
     () =>
+      apiTrip ||
       myTrips.find((t) => String(t.id) === String(tripId)) ||
       (tripId === "1" ? MOCK_TRIP : null),
-    [myTrips, tripId],
+    [apiTrip, myTrips, tripId],
   );
 
   const [selectedTab, setSelectedTab] = useState("일정");

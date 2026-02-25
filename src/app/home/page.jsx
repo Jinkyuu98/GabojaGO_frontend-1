@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { getScheduleList } from "../../services/schedule";
 import { BottomNavigation } from "../../components/layout/BottomNavigation";
 import { MobileContainer } from "../../components/layout/MobileContainer";
 import { ActionSheet } from "../../components/common/ActionSheet";
@@ -14,9 +15,38 @@ export default function HomePage() {
   const { setTravelData, resetTravelData } = useOnboardingStore();
   const [activeTab, setActiveTab] = useState("전체");
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
-
-  // TO-DO: 실제 데이터 연동 시 이 값을 일정이 있는지 여부로 변경해야 합니다.
   const [hasTripData, setHasTripData] = useState(false);
+  const [ongoingTrips, setOngoingTrips] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        setIsLoading(true);
+        const res = await getScheduleList("B");
+        if (res?.schedule_list) {
+          const ongoing = res.schedule_list.filter(trip => trip.chStatus?.toUpperCase() === "B");
+          setOngoingTrips(ongoing);
+          setHasTripData(ongoing.length > 0);
+        }
+      } catch (err) {
+        console.error("일정 목록 조회 실패:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSchedules();
+  }, []);
+
+  const formatDateRange = (start, end) => {
+    if (!start) return "";
+    const cleanStart = start.split("T")[0].replace(/-/g, ".");
+    if (!end) return cleanStart;
+    const cleanEnd = end.split("T")[0].replace(/-/g, ".");
+    const startYear = cleanStart.split(".")[0];
+    const endYear = cleanEnd.split(".")[0];
+    return startYear === endYear ? `${cleanStart} ~ ${cleanEnd.substring(5)}` : `${cleanStart} ~ ${cleanEnd}`;
+  };
 
   // 드래그 스크롤 상태를 각 인덱스별로 관리하는 Ref
   const dragState = useRef({});
@@ -83,87 +113,109 @@ export default function HomePage() {
         </header>
 
         {/* Dashboard Content - Grid Layout for Desktop */}
-        {hasTripData ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20 min-h-[50vh]">
+            <p className="text-[#898989] text-[15px]">여행 일정을 불러오는 중입니다...</p>
+          </div>
+        ) : hasTripData ? (
           <div className="lg:grid lg:grid-cols-12 lg:gap-10 px-5">
             {/* Main Travel Card Column */}
             <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
               <h2 className="hidden lg:block text-[20px] font-bold text-[#111] mb-2">
                 나의 진행 중인 여행
               </h2>
-              <div
-                className="bg-[#eaf1f7] rounded-2xl p-6 lg:p-8 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={handleCardClick}
-              >
-                {/* Trip Info */}
-                <div className="flex flex-col gap-2 mb-6">
-                  <div className="flex justify-between border-b border-[#d1dbe2] pb-4">
-                    <span className="text-[15px] font-medium text-[#6d818f]">
-                      친구와 함께
-                    </span>
-                    <span className="text-[15px] font-medium text-[#6d818f]">
-                      2026.02.10 ~ 02.14
-                    </span>
-                  </div>
-                  <h2 className="text-[24px] lg:text-[32px] font-bold tracking-[-0.5px] text-[#111111] pt-4">
-                    제주도 여행
-                  </h2>
-                </div>
+              <div className="flex flex-col gap-4">
+                {ongoingTrips.map((trip) => {
+                  const companionText = trip.strWithWho
+                    ? ["친구와", "연인과", "가족과", "부모님과", "친구", "연인", "가족", "부모님"].includes(trip.strWithWho)
+                      ? `${trip.strWithWho} 함께`
+                      : trip.strWithWho
+                    : "나홀로";
 
-                {/* Category Tags */}
-                <div className="flex gap-2 mb-10">
-                  {["자연", "맛집", "카페", "쇼핑"].map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[14px] font-semibold text-[#6d818f] px-4 py-2 rounded-xl bg-white/80"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Budget Section */}
-                <div className="flex flex-col gap-3 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[16px] font-medium text-[#556574]">
-                      남은 예산
-                    </span>
-                    <span className="text-[16px] text-[#556574]">
-                      <span className="font-bold text-[#111]">412,000원</span> /
-                      500,000원
-                    </span>
-                  </div>
-                  {/* Progress Bar */}
-                  <div className="relative w-full h-4 bg-white rounded-full overflow-hidden border border-[#111111]/5">
+                  return (
                     <div
-                      className="absolute top-0 left-0 h-full bg-[#111111] rounded-full"
-                      style={{ width: "80%" }}
-                    />
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 mt-4">
-                  {[
-                    { icon: "/icons/camera.svg", label: "사진 등록" },
-                    { icon: "/icons/receipt.svg", label: "영수증 등록" },
-                    { icon: "/icons/map-pin.svg", label: "지도 보기" },
-                  ].map((btn, idx) => (
-                    <button
-                      key={idx}
-                      className="flex-1 flex flex-col items-center gap-2 bg-white rounded-2xl border border-[#e5eef4] py-6 hover:bg-[#fcfdfe] transition-colors"
+                      key={trip.iPK}
+                      className="bg-[#eaf1f7] rounded-2xl p-6 lg:p-8 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => router.push(`/trips/${trip.iPK}`)}
                     >
-                      <Image
-                        src={btn.icon}
-                        alt={btn.label}
-                        width={28}
-                        height={28}
-                      />
-                      <span className="text-[14px] font-bold text-[#556574]">
-                        {btn.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                      {/* Trip Info */}
+                      <div className="flex flex-col gap-2 mb-6">
+                        <div className="flex justify-between border-b border-[#d1dbe2] pb-4">
+                          <span className="text-[15px] font-medium text-[#6d818f]">
+                            {companionText}
+                          </span>
+                          <span className="text-[15px] font-medium text-[#6d818f]">
+                            {formatDateRange(trip.dtDate1, trip.dtDate2)}
+                          </span>
+                        </div>
+                        <h2 className="text-[24px] lg:text-[32px] font-bold tracking-[-0.5px] text-[#111111] pt-4">
+                          {trip.strWhere}
+                        </h2>
+                      </div>
+
+                      {/* Category Tags */}
+                      <div className="flex flex-wrap gap-2 mb-10">
+                        {(trip.strTripStyle
+                          ? trip.strTripStyle.split(",").map(t => t.trim()).filter(Boolean)
+                          : trip.tags || ["자연", "맛집", "카페", "쇼핑"]
+                        ).map((tag, idx) => (
+                          <span
+                            key={`${tag}-${idx}`}
+                            className="text-[14px] font-semibold text-[#6d818f] px-4 py-2 rounded-xl bg-white/80"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Budget Section */}
+                      <div className="flex flex-col gap-3 mb-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[16px] font-medium text-[#556574]">
+                            남은 예산 (임시)
+                          </span>
+                          <span className="text-[16px] text-[#556574]">
+                            <span className="font-bold text-[#111]">
+                              {(trip.nTotalBudget || 500000).toLocaleString()}원
+                            </span> /
+                            {(trip.nTotalBudget || 500000).toLocaleString()}원
+                          </span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="relative w-full h-4 bg-white rounded-full overflow-hidden border border-[#111111]/5">
+                          <div
+                            className="absolute top-0 left-0 h-full bg-[#111111] rounded-full"
+                            style={{ width: "100%" }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 mt-4">
+                        {[
+                          { icon: "/icons/camera.svg", label: "사진 등록" },
+                          { icon: "/icons/receipt.svg", label: "영수증 등록" },
+                          { icon: "/icons/map-pin.svg", label: "지도 보기" },
+                        ].map((btn, idx) => (
+                          <button
+                            key={idx}
+                            className="flex-1 flex flex-col items-center gap-2 bg-white rounded-2xl border border-[#e5eef4] py-6 hover:bg-[#fcfdfe] transition-colors"
+                          >
+                            <Image
+                              src={btn.icon}
+                              alt={btn.label}
+                              width={28}
+                              height={28}
+                            />
+                            <span className="text-[14px] font-bold text-[#556574]">
+                              {btn.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

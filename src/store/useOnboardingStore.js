@@ -75,6 +75,12 @@ export const useOnboardingStore = create(
           return new Date().toISOString().split("T")[0];
         };
 
+        // 여행 스타일(배열) 파싱 후 문자열로 결합 (예: "맛집, 자연경관")
+        // 사용자가 선택한 travelData.styles 는 [{ label: "맛집", value: "restaurant" }, ...] 형태임
+        const tripStyleLabel = travelData.styles?.length > 0
+          ? travelData.styles.map(s => s.label || "").filter(Boolean).join(", ")
+          : "일반";
+
         // 아이디가 문자열(String)인 경우 파싱 시도, 실패 시 임시값 1 부여
         const parsedUserId = parseInt(user?.id, 10);
         const safeUserId = isNaN(parsedUserId) ? 1 : parsedUserId;
@@ -86,6 +92,7 @@ export const useOnboardingStore = create(
           dtDate2: formatDate(travelData.endDate),
           strWhere: travelData.location || "제주도",
           strWithWho: companionLabel,
+          strTripStyle: tripStyleLabel,
           strTransport: travelData.transport || "대중교통",
           nTotalPeople: travelData.peopleCount || 1,
           nTotalBudget: calculateTotalBudget(budget),
@@ -93,7 +100,7 @@ export const useOnboardingStore = create(
           nTransportRatio: budget.transport?.ratio || 25,
           nLodgingRatio: budget.accommodation?.ratio || 25,
           nFoodRatio: budget.food?.ratio || 25,
-          chStatus: "P",
+          chStatus: "A", // 새로 생성되는 일정이므로 '예정(A)' 상태 부여
           dtCreate: new Date().toISOString().replace("T", " ").substring(0, 19),
         };
 
