@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { MobileContainer } from "../../../../../components/layout/MobileContainer";
+import { addScheduleExpense } from "../../../../../services/schedule";
 
 export default function TravelCameraPage() {
   const params = useParams();
@@ -111,9 +112,57 @@ export default function TravelCameraPage() {
     setCapturedImage(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log(`Saving ${mode} for trip:`, tripId);
-    alert(isReceipt ? "영수증이 등록되었습니다!" : "사진이 저장되었습니다!");
+
+    if (isReceipt && capturedImage) {
+      try {
+        // [ADD] 영수증 파싱 API 호출 로직 추가 (data URI -> blob 변환)
+        const fetchResponse = await fetch(capturedImage);
+        const blob = await fetchResponse.blob();
+
+        const formData = new FormData();
+        formData.append("file", blob, "receipt.jpg");
+
+        // UI에 로딩 상태를 알리기 위해 임시 알림 (실서비스에선 로딩 스피너 권장)
+        alert("영수증 분석을 분석 중입니다... 확인을 누르고 잠시만 기다려주세요.");
+
+        const response = await fetch('/api/vision/parse', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`API 오류: ${response.status}`);
+        }
+
+        const expenseData = await response.json();
+        console.log("GPT 영수증 분석 완료:", expenseData);
+
+        // 3. 백엔드(DB)로 실제 영수증 내역 전송
+        // OpenAPI 스폰서 스키마(ScheduleExpenseModel)에 맞춰 속성명(chCategory, nMoney, dtExpense 등) 및 필수값(iUserFK, iLocation) 부여
+        const parsedUserId = parseInt(localStorage.getItem("userId") || "1", 10);
+        const safeUserId = isNaN(parsedUserId) ? 1 : parsedUserId;
+
+        await addScheduleExpense({
+          iScheduleFK: parseInt(tripId, 10), // URL 파라미터 tripId
+          iUserFK: safeUserId, // 지출한 사용자 PK
+          dtExpense: expenseData.date || new Date().toISOString().replace("T", " ").substring(0, 19),
+          chCategory: expenseData.category ? expenseData.category.charAt(0).toUpperCase() : "F", // 카테고리 문자 (F, E 등)
+          nMoney: parseInt(expenseData.total || 0, 10), // 총 지출
+          iLocation: 0, // 장소 특정 불가 시 0 처분
+          strMemo: expenseData.strMemo || "영수증 지출",
+        });
+
+        alert(`🎉 영수증 등록 및 지출 저장 완전 성공! (DB 저장 완료)\n\n결제금액: ${expenseData.total}원\n내용: ${expenseData.strMemo}`);
+      } catch (error) {
+        console.error("영수증 분석 실패:", error);
+        alert("영수증 등록 및 분석 중 오류가 발생했습니다.");
+      }
+    } else if (!isReceipt) {
+      alert("사진이 저장되었습니다!");
+    }
+
     router.push(`/trips/${tripId}`);
   };
 

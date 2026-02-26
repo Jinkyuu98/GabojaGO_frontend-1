@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { createSchedule } from "../services/schedule";
+import { createSchedule, addScheduleLocation } from "../services/schedule";
 
 export const useOnboardingStore = create(
   persist(
@@ -85,6 +85,16 @@ export const useOnboardingStore = create(
         const parsedUserId = parseInt(user?.id, 10);
         const safeUserId = isNaN(parsedUserId) ? 1 : parsedUserId;
 
+        // 교통 수단 맵핑
+        const TRANSPORT_MAP = {
+          car: "자동차",
+          public: "대중교통",
+          bike: "자전거",
+          walk: "도보",
+          other: "기타",
+        };
+        const transportLabel = TRANSPORT_MAP[travelData.transport] || travelData.transport || "대중교통";
+
         const payload = {
           // iPK: 0 (제외하거나 0으로 세팅)
           iUserFK: safeUserId, // Store의 유저 정보 (항상 정수형)
@@ -93,7 +103,7 @@ export const useOnboardingStore = create(
           strWhere: travelData.location || "제주도",
           strWithWho: companionLabel,
           strTripStyle: tripStyleLabel,
-          strTransport: travelData.transport || "대중교통",
+          strTransport: transportLabel,
           nTotalPeople: travelData.peopleCount || 1,
           nTotalBudget: calculateTotalBudget(budget),
           nAlarmRatio: budget.alertThreshold || 25, // 경고 알림 설정치 혹은 임의
@@ -107,8 +117,32 @@ export const useOnboardingStore = create(
         try {
           // 1) 백엔드 /schedule/create 통신
           const createdRes = await createSchedule(payload);
+          const iScheduleFK = createdRes?.iPK;
 
-          // 2) 성공 시 Store에 저장 (Trips 페이지에서 렌더링 할 데이터)
+          // 2) 로딩 화면에서 미리 병합해 둔 카카오 API(kakao_location) 데이터를 그대로 읽어 자식 테이블(Location)에 적재
+          if (iScheduleFK && state.generatedTripData?.day_schedules) {
+            try {
+              for (const dayObj of state.generatedTripData.day_schedules) {
+                if (!Array.isArray(dayObj.activities)) continue;
+                for (const act of dayObj.activities) {
+                  const loc = act.kakao_location; // 파이프라인(generate-loading)에서 미리 합쳐진 객체
+                  if (loc && loc.iPK) {
+                    await addScheduleLocation({
+                      iScheduleFK: iScheduleFK,
+                      iLocationFK: loc.iPK,
+                      dtSchedule: act.dtSchedule || new Date().toISOString().replace("T", " ").substring(0, 19),
+                      strMemo: act.strMemo || "방문",
+                    });
+                  }
+                }
+              }
+              console.log("[saveTrip] 장소 DB(자식 테이블) 트리 일괄 저장 처리 완료");
+            } catch (locErr) {
+              console.error("[saveTrip Error] 장소 DB 저장 실패 (스케줄은 생성됨)", locErr);
+            }
+          }
+
+          // 4) 성공 시 로컬 Store에 저장 (Trips 페이지에서 렌더링 할 데이터)
           // (백엔드에서 오는 값과 프론트엔드 목업이 섞이므로 UI에서 문제 없도록 조정)
           const newTrip = {
             ...state.generatedTripData,

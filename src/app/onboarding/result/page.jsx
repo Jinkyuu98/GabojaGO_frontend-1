@@ -8,7 +8,7 @@ import { useOnboardingStore } from "../../../store/useOnboardingStore";
 
 export default function ResultPage() {
   const router = useRouter();
-  const { saveTrip } = useOnboardingStore();
+  const { saveTrip, generatedTripData } = useOnboardingStore();
   const [selectedTab, setSelectedTab] = useState("일정");
   const [selectedDay, setSelectedDay] = useState(1);
   const [sheetHeight, setSheetHeight] = useState(478);
@@ -113,11 +113,23 @@ export default function ResultPage() {
     ],
   };
 
-  const trip = MOCK_TRIP;
+  // Transform AI Data to UI mockup structure
+  const trip = generatedTripData ? {
+    ...MOCK_TRIP,
+    days: generatedTripData.day_schedules?.map((dayObj) => ({
+      places: dayObj.activities?.map((act) => ({
+        name: act.place_name,
+        time: act.dtSchedule ? act.dtSchedule.split(' ')[1]?.substring(0, 5) : "",
+        duration: act.strMemo || "방문",
+        kakao: act.kakao_location || null // 실제 지도 렌더링에 사용할 카카오 API 데이터
+      })) || [],
+      records: []
+    })) || []
+  } : MOCK_TRIP;
   const currentDayPlaces = trip.days?.[selectedDay - 1]?.places || [];
   const currentDayRecords = trip.days?.[selectedDay - 1]?.records || [];
   const dayCount = trip.days?.length || 1;
-  const days = Array.from({ length: 5 }, (_, i) => `${i + 1}일차`);
+  const days = Array.from({ length: dayCount }, (_, i) => `${i + 1}일차`);
 
   useEffect(() => {
     const h = window.innerHeight;

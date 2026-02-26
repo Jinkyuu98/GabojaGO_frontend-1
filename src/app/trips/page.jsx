@@ -103,20 +103,14 @@ export default function TripsListPage() {
     const fetchSchedules = async () => {
       try {
         setIsLoading(true);
-        // '예정(a)', '진행(b)', '완료(c)' 목록을 병렬로 조회
-        const [resA, resB, resC] = await Promise.all([
-          getScheduleList("A"),
-          getScheduleList("B"),
-          getScheduleList("C")
-        ]);
+        // 백엔드가 이미 전체 목록을 반환하므로 1번만 호출하여 트래픽 최적화
+        const res = await getScheduleList();
 
-        const allTrips = [
-          ...(resA?.schedule_list || []),
-          ...(resB?.schedule_list || []),
-          ...(resC?.schedule_list || [])
-        ];
+        // 방어 로직: 혹시 모를 중복 방관을 위해 iPK 기준 유니크 처리
+        const allTrips = res?.schedule_list || [];
+        const uniqueTrips = Array.from(new Map(allTrips.map(trip => [trip.iPK, trip])).values());
 
-        setScheduleList(allTrips);
+        setScheduleList(uniqueTrips);
       } catch (err) {
         console.error("일정 목록 전체 조회 실패:", err);
       } finally {
